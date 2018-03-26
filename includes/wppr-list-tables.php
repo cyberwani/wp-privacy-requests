@@ -216,7 +216,7 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 
 			$time_diff = current_time( 'timestamp', true ) - $cell_value;
 
-			if ( $time_diff > 0 && $time_diff < DAY_IN_SECONDS ) {
+			if ( $time_diff >= 0 && $time_diff < DAY_IN_SECONDS ) {
 				return sprintf( __( '%s ago' ), human_time_diff( $cell_value ) );
 			}
 
