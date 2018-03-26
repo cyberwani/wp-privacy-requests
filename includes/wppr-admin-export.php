@@ -36,7 +36,7 @@ function _wp_privacy_export_requests_page() {
 			}
 
 			if ( ! empty( $doing_personal_data_export_for_email ) ) {
-				$result = send_confirm_account_action_email( 'export_personal_data', __( 'Export personal data' ), $doing_personal_data_export_for_email );
+				$result = wp_send_account_verification_key( $doing_personal_data_export_for_email, 'export_personal_data', __( 'Export personal data' ) );
 				if ( is_wp_error( $result ) || ! $result ) {
 					add_settings_error(
 						'username_or_email_to_export',
