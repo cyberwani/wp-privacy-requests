@@ -16,6 +16,7 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 	function get_columns() {
 		$columns = array(
 			'email'     => __( 'Email' ),
+			'type'      => __( 'Request type' ),
 			'requested' => __( 'Requested' ),
 			'verified'  => __( 'Verified' ),
 			'actions'   => __( 'Export File Actions' ),
@@ -69,5 +70,11 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 		);
 
 		return sprintf( '%1$s %2$s', $item['email'], $this->row_actions( $actions ) );
+	}
+
+	function column_type( $item ) {
+		// TODO nicenames
+
+		echo esc_html( $item['action'] );
 	}
 }

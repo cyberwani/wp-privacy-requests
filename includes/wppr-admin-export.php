@@ -15,9 +15,10 @@ function _wp_privacy_export_requests_page() {
 	if ( ! empty( $action ) ) {
 		check_admin_referer( $action );
 
-		if ( 'add-export-request' === $action ) {
-			$username_or_email_address = isset( $_POST['username_or_email_to_export'] ) ? $_POST['username_or_email_to_export'] : '';
-			$username_or_email_address = sanitize_text_field( $username_or_email_address );
+		if ( 'add-personal-data-request' === $action && isset( $_POST['type_of_action'], $_POST['username_or_email_to_export'] ) ) {
+			$action_type               = sanitize_text_field( $_POST['type_of_action'] );
+			$username_or_email_address = sanitize_text_field( $_POST['username_or_email_to_export'] );
+			$email_address             = '';
 
 			if ( ! is_email( $username_or_email_address ) ) {
 				$user = get_user_by( 'login', $username_or_email_address );
@@ -29,14 +30,24 @@ function _wp_privacy_export_requests_page() {
 						'error'
 					);
 				} else {
-					$doing_personal_data_export_for_email = $user->user_email;
+					$email_address = $user->user_email;
 				}
 			} else {
-				$doing_personal_data_export_for_email = $username_or_email_address;
+				$email_address = $username_or_email_address;
 			}
 
-			if ( ! empty( $doing_personal_data_export_for_email ) ) {
-				$result = wp_send_account_verification_key( $doing_personal_data_export_for_email, 'export_personal_data', __( 'Export personal data' ) );
+			if ( ! empty( $email_address ) ) {
+				$result = false;
+
+				switch ( $action_type ) {
+					case 'export_personal_data':
+						$result = wp_send_account_verification_key( $email_address, 'export_personal_data', __( 'Export personal data' ) );
+						break;
+					case 'remove_personal_data':
+						$result = wp_send_account_verification_key( $email_address, 'remove_personal_data', __( 'Remove personal data' ) );
+						break;
+				}
+
 				if ( is_wp_error( $result ) || ! $result ) {
 					add_settings_error(
 						'username_or_email_to_export',
@@ -74,19 +85,19 @@ function _wp_privacy_export_requests_page() {
 						<p><?php _e( 'An email will be sent to the user at this email address, asking them to verify the request.' ); ?></p>
 
 						<form method="post" action="">
-							<input type="hidden" name="action" value="add-export-request" />
-							<?php wp_nonce_field( 'add-export-request' ); ?>
+							<input type="hidden" name="action" value="add-personal-data-request" />
+							<?php wp_nonce_field( 'add-personal-data-request' ); ?>
 							<fieldset>
 								<div class="form-field form-required">
 									<label for="type_of_action"><?php _e( 'Type of action to request' ); ?></label>
-									<select id="type_of_action">
-										<option value="export"><?php esc_html_e( 'Personal data export' ); ?></option>
-										<option value="remove"><?php esc_html_e( 'Personal data removal' ); ?></option>
+									<select id="type_of_action" name="type_of_action">
+										<option value="export_personal_data"><?php esc_html_e( 'Personal data export' ); ?></option>
+										<option value="remove_personal_data"><?php esc_html_e( 'Personal data removal' ); ?></option>
 									</select>
 								</div>
 								<div class="form-field form-required">
 									<label for="username_or_email_to_export"><?php _e( 'Username or email address' ); ?></label>
-									<input type="text" class="regular-text" name="username_or_email_to_export" />
+									<input type="text" class="regular-text" id="username_or_email_to_export" name="username_or_email_to_export" />
 								</div>
 							</fieldset>
 							<?php submit_button( __( 'Send request' ) ); ?>
