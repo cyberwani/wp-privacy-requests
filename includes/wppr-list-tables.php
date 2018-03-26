@@ -18,7 +18,7 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 			'email'     => __( 'Email' ),
 			'type'      => __( 'Request type' ),
 			'requested' => __( 'Requested' ),
-			'verified'  => __( 'Verified' ),
+			'confirmed' => __( 'Confirmed' ),
 			'actions'   => __( 'Export File Actions' ),
 		);
 
@@ -28,17 +28,17 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 	function prepare_items() {
 		global $export_requests;
 
-		$columns = $this->get_columns();
-		$hidden = array();
-		$sortable = array();
+		$columns               = $this->get_columns();
+		$hidden                = array();
+		$sortable              = array();
 		$this->_column_headers = array( $columns, $hidden, $sortable );
-		$this->items = $export_requests;
+		$this->items           = $export_requests;
 	}
 
 	function column_default( $item, $column_name ) {
 		$cell_value = $item[ $column_name ];
 
-		if ( in_array( $column_name, array( 'requested', 'verified' ) ) ) {
+		if ( in_array( $column_name, array( 'requested', 'confirmed' ) ) ) {
 			if ( empty( $cell_value ) ) {
 				return '-';
 			}

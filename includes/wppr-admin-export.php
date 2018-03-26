@@ -41,14 +41,21 @@ function _wp_privacy_export_requests_page() {
 
 				switch ( $action_type ) {
 					case 'export_personal_data':
-						$result = wp_send_account_verification_key( $email_address, 'export_personal_data', __( 'Export personal data' ) );
+						$result = _wp_privacy_create_request( $email_address, 'export_personal_data', __( 'Export personal data' ) );
 						break;
 					case 'remove_personal_data':
-						$result = wp_send_account_verification_key( $email_address, 'remove_personal_data', __( 'Remove personal data' ) );
+						$result = _wp_privacy_create_request( $email_address, 'remove_personal_data', __( 'Remove personal data' ) );
 						break;
 				}
 
-				if ( is_wp_error( $result ) || ! $result ) {
+				if ( is_wp_error( $result ) ) {
+					add_settings_error(
+						'username_or_email_to_export',
+						'username_or_email_to_export',
+						$result->get_error_message(),
+						'error'
+					);
+				} elseif ( ! $result ) {
 					add_settings_error(
 						'username_or_email_to_export',
 						'username_or_email_to_export',
