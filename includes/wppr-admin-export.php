@@ -62,28 +62,47 @@ function _wp_privacy_export_requests_page() {
 	$requests_table->set_items( $export_requests );
 
 	?>
-	<div class="wrap">
-		<h1><?php _e( 'Personal Data Export' ); ?></h1>
+	<div class="wrap nosubsub">
+		<h1><?php _e( 'Personal Data Requests' ); ?></h1>
+		<hr class="wp-header-end" />
 		<?php settings_errors(); ?>
+		<div id="col-container" class="wp-clearfix">
+			<div id="col-left">
+				<div class="col-wrap">
+					<div class="form-wrap">
+						<h2><?php _e( 'New Request' ); ?></h2>
+						<p><?php _e( 'An email will be sent to the user at this email address, asking them to verify the request.' ); ?></p>
 
-		<h2><?php _e( 'Export Requests' ); ?></h2>
-	<?php
-		$requests_table->prepare_items();
-		$requests_table->display();
-	?>
-	<h3><?php _e( 'Add New Request' ); ?></h3>
-	<form method="post" action="">
-		<input type="hidden" name="action" value="add-export-request" />
-		<?php wp_nonce_field( 'add-export-request' ); ?>
-		<fieldset>
-			<legend class="screen-reader-text"><span><?php _e( 'Enter the username or email address of the user whose personal data you wish to export.' ); ?></span></legend>
-			<label for="username_or_email_to_export">
-				<input type="text" class="regular-text" name="username_or_email_to_export" />
-			</label>
-			<p class="description"><?php _e( 'A verification email will be sent to the user at this email address, asking them to verify the request.' ); ?></p>
-		</fieldset>
-		<?php submit_button( __( 'Add New Request' ) ); ?>
-	</form>
+						<form method="post" action="">
+							<input type="hidden" name="action" value="add-export-request" />
+							<?php wp_nonce_field( 'add-export-request' ); ?>
+							<fieldset>
+								<div class="form-field form-required">
+									<label for="type_of_action"><?php _e( 'Type of action to request' ); ?></label>
+									<select id="type_of_action">
+										<option value="export"><?php esc_html_e( 'Personal data export' ); ?></option>
+										<option value="remove"><?php esc_html_e( 'Personal data removal' ); ?></option>
+									</select>
+								</div>
+								<div class="form-field form-required">
+									<label for="username_or_email_to_export"><?php _e( 'Username or email address' ); ?></label>
+									<input type="text" class="regular-text" name="username_or_email_to_export" />
+								</div>
+							</fieldset>
+							<?php submit_button( __( 'Send request' ) ); ?>
+						</form>
+					</div>
+				</div>
+			</div>
+			<div id="col-right">
+				<div class="col-wrap">
+				<?php
+				$requests_table->prepare_items();
+				$requests_table->display();
+				?>
+				</div>
+			</div>
+		</div>
 	</div>
 	<?php
 }
