@@ -33,8 +33,8 @@ function _wp_privacy_post_types() {
 		)
 	);
 	register_post_status(
-		'new', array(
-			'label'               => 'new',
+		'pending', array(
+			'label'               => 'pending',
 			'internal'            => true,
 			'_builtin'            => true, /* internal use only. */
 			'exclude_from_search' => false,
@@ -75,9 +75,11 @@ function _wp_privacy_create_request( $email_address, $action, $description ) {
 	}
 
 	$privacy_request_id = wp_insert_post( array(
-		'post_author' => $user_id,
-		'post_status' => 'new',
-		'post_type'   => 'privacy_request',
+		'post_author'   => $user_id,
+		'post_status'   => 'pending',
+		'post_type'     => 'privacy_request',
+		'post_date'     => current_time( 'mysql', false ),
+		'post_date_gmt' => current_time( 'mysql', true ),
 	), true );
 
 	if ( is_wp_error( $privacy_request_id ) ) {
@@ -108,6 +110,10 @@ function _wp_privacy_account_action_confirmed( $result ) {
 		}
 
 		update_post_meta( $privacy_request_id, '_confirmed_timestamp', time() );
+		wp_update_post( array(
+			'ID'          => $privacy_request_id,
+			'post_status' => 'confirmed',
+		), $wp_error );
 	}
 }
 
@@ -117,7 +123,19 @@ function _wp_privacy_account_action_confirmed( $result ) {
  * @param array $result Result of the action from the user.
  */
 function _wp_privacy_account_action_failed( $result ) {
-	// TODO
+	if ( isset( $result['action'], $result['request_data'], $result['request_data']['privacy_request_id'] ) && in_array( $result['action'], array( 'remove_personal_data', 'export_personal_data' ), true ) ) {
+		$privacy_request_id = absint( $result['request_data']['privacy_request_id'] );
+		$privacy_request    = get_post( $privacy_request_id );
+
+		if ( ! $privacy_request || 'privacy_request' !== $privacy_request->post_type ) {
+			return;
+		}
+
+		wp_update_post( array(
+			'ID'          => $privacy_request_id,
+			'post_status' => 'failed',
+		), $wp_error );
+	}
 }
 
 /**

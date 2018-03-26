@@ -8,12 +8,25 @@ if ( ! class_exists( 'WP_List_Table' ) ) {
 	require_once( ABSPATH . 'wp-admin/includes/class-wp-list-table.php' );
 }
 
+/**
+ * WP_Personal_Data_Export_Requests_Table class.
+ */
 class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
-	function set_items( $data ) {
+	/**
+	 * Set items from data.
+	 *
+	 * @param array $data Items being shown.
+	 */
+	public function set_items( $data ) {
 		$this->items = $data;
 	}
 
-	function get_columns() {
+	/**
+	 * Get columns to show in the list table.
+	 *
+	 * @param array Array of columns.
+	 */
+	public function get_columns() {
 		$columns = array(
 			'email'     => __( 'Email' ),
 			'type'      => __( 'Request type' ),
@@ -21,11 +34,13 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 			'confirmed' => __( 'Confirmed' ),
 			'actions'   => __( 'Export File Actions' ),
 		);
-
 		return $columns;
 	}
 
-	function prepare_items() {
+	/**
+	 * Prepare items to output.
+	 */
+	public function prepare_items() {
 		global $export_requests;
 
 		$columns               = $this->get_columns();
@@ -35,15 +50,21 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 		$this->items           = $export_requests;
 	}
 
-	function column_default( $item, $column_name ) {
+	/**
+	 * Default column handler.
+	 *
+	 * @param array $item Item being shown.
+	 */
+	public function column_default( $item, $column_name ) {
 		$cell_value = $item[ $column_name ];
 
-		if ( in_array( $column_name, array( 'requested', 'confirmed' ) ) ) {
+		if ( in_array( $column_name, array( 'requested', 'confirmed' ), true ) ) {
 			if ( empty( $cell_value ) ) {
 				return '-';
 			}
 
 			$time_diff = current_time( 'timestamp', true ) - $cell_value;
+
 			if ( $time_diff > 0 && $time_diff < DAY_IN_SECONDS ) {
 				return sprintf( __( '%s ago' ), human_time_diff( $cell_value ) );
 			}
@@ -54,14 +75,15 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 				date( get_option( 'time_format' ), $cell_value );
 		}
 
-		if ( 'actions' === $column_name ) {
-			return '<a href="#">Download</a> | <a href="#">Send via Email</a>';
-		}
-
 		return $cell_value;
 	}
 
-	function column_email( $item ) {
+	/**
+	 * Actions column.
+	 *
+	 * @param array $item Item being shown.
+	 */
+	public function column_email( $item ) {
 		// TODO links, nonces
 
 		$actions = array(
@@ -72,9 +94,31 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 		return sprintf( '%1$s %2$s', $item['email'], $this->row_actions( $actions ) );
 	}
 
-	function column_type( $item ) {
-		// TODO nicenames
+	/**
+	 * Type column.
+	 *
+	 * @param array $item Item being shown.
+	 */
+	public function column_type( $item ) {
+		switch ( $item['action'] ) {
+			case 'remove_personal_data':
+				return esc_html__( 'Remove' );
+			case 'export_personal_data':
+				return esc_html__( 'Export' );
+		}
+	}
 
-		echo esc_html( $item['action'] );
+	/**
+	 * Actions column.
+	 *
+	 * @param array $item Item being shown.
+	 */
+	public function column_actions( $item ) {
+		switch ( $item['action'] ) {
+			case 'remove_personal_data':
+			case 'export_personal_data':
+				return '<a href="#">Download</a> | <a href="#">Send via Email</a>';
+				break;
+		}
 	}
 }
