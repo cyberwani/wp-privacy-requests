@@ -13,9 +13,9 @@ function _wp_privacy_export_requests_page() {
 	$action = isset( $_POST['action'] ) ? $_POST['action'] : '';
 
 	if ( ! empty( $action ) ) {
-		check_admin_referer( $action );
-
 		if ( 'add-personal-data-request' === $action && isset( $_POST['type_of_action'], $_POST['username_or_email_to_export'] ) ) {
+			check_admin_referer( $action );
+
 			$action_type               = sanitize_text_field( $_POST['type_of_action'] );
 			$username_or_email_address = sanitize_text_field( $_POST['username_or_email_to_export'] );
 			$email_address             = '';
@@ -39,14 +39,7 @@ function _wp_privacy_export_requests_page() {
 			if ( ! empty( $email_address ) ) {
 				$result = false;
 
-				switch ( $action_type ) {
-					case 'export_personal_data':
-						$result = _wp_privacy_create_request( $email_address, 'export_personal_data', __( 'Export personal data' ) );
-						break;
-					case 'remove_personal_data':
-						$result = _wp_privacy_create_request( $email_address, 'remove_personal_data', __( 'Remove personal data' ) );
-						break;
-				}
+				$result = _wp_privacy_create_request( $email_address, $action_type, _wp_privacy_action_description( $action_type ) );
 
 				if ( is_wp_error( $result ) ) {
 					add_settings_error(
@@ -74,7 +67,10 @@ function _wp_privacy_export_requests_page() {
 		}
 	}
 
-	$requests_table = new WP_Personal_Data_Export_Requests_Table();
+	$requests_table = new WP_Personal_Data_Export_Requests_Table( array(
+		'plural'   => 'privacy_requests',
+		'singular' => 'privacy_request',
+	) );
 	$requests_table->prepare_items();
 	?>
 	<div class="wrap nosubsub">
@@ -92,7 +88,7 @@ function _wp_privacy_export_requests_page() {
 						<h2><?php _e( 'New Request' ); ?></h2>
 						<p><?php _e( 'An email will be sent to the user at this email address, asking them to verify the request.' ); ?></p>
 
-						<form method="post" action="">
+						<form method="post">
 							<input type="hidden" name="action" value="add-personal-data-request" />
 							<?php wp_nonce_field( 'add-personal-data-request' ); ?>
 							<fieldset>
@@ -115,9 +111,11 @@ function _wp_privacy_export_requests_page() {
 			</div>
 			<div id="col-right">
 				<div class="col-wrap">
-				<?php
-				$requests_table->display();
-				?>
+				<form method="post">
+					<?php
+					$requests_table->display();
+					?>
+				</form>
 				</div>
 			</div>
 		</div>

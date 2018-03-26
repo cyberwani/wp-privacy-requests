@@ -34,7 +34,7 @@ function _wp_privacy_post_types() {
 	);
 	register_post_status(
 		'pending', array(
-			'label'               => 'pending',
+			'label'               => __( 'Pending' ),
 			'internal'            => true,
 			'_builtin'            => true, /* internal use only. */
 			'exclude_from_search' => false,
@@ -42,7 +42,7 @@ function _wp_privacy_post_types() {
 	);
 	register_post_status(
 		'confirmed', array(
-			'label'               => 'confirmed',
+			'label'               => __( 'Confirmed' ),
 			'internal'            => true,
 			'_builtin'            => true, /* internal use only. */
 			'exclude_from_search' => false,
@@ -50,7 +50,7 @@ function _wp_privacy_post_types() {
 	);
 	register_post_status(
 		'failed', array(
-			'label'               => 'failed',
+			'label'               => __( 'Failed' ),
 			'internal'            => true,
 			'_builtin'            => true, /* internal use only. */
 			'exclude_from_search' => false,
@@ -135,5 +135,17 @@ function _wp_privacy_account_action_failed( $result ) {
 			'ID'          => $privacy_request_id,
 			'post_status' => 'failed',
 		), $wp_error );
+	}
+}
+
+/**
+ * Get action description from the name.
+ */
+function _wp_privacy_action_description( $action_name ) {
+	switch ( $action_name ) {
+		case 'export_personal_data':
+			return __( 'Export personal data' );
+		case 'remove_personal_data':
+			return __( 'Remove personal data' );
 	}
 }
