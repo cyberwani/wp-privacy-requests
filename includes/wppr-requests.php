@@ -137,31 +137,3 @@ function _wp_privacy_account_action_failed( $result ) {
 		), $wp_error );
 	}
 }
-
-/**
- * Get all requests (from CPT) into a standardized format.
- *
- * @return array Array of requests.
- */
-function _wp_privacy_get_all_unconfirmed_personal_data_export_requests() {
-	global $wpdb;
-
-	$requests         = array();
-	$privacy_requests = get_posts( array(
-		'post_type'      => 'privacy_request',
-		'posts_per_page' => -1,
-		'post_status'    => 'any',
-	) );
-
-	foreach ( $privacy_requests as $privacy_request ) {
-		$requests[] = array(
-			'user_id'   => $privacy_request->post_author,
-			'email'     => get_post_meta( $privacy_request->ID, '_user_email', true ),
-			'action'    => get_post_meta( $privacy_request->ID, '_action_name', true ),
-			'requested' => strtotime( $privacy_request->post_date_gmt ),
-			'confirmed' => get_post_meta( $privacy_request->ID, '_confirmed_timestamp', true ),
-		);
-	}
-
-	return $requests;
-}

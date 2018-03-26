@@ -12,14 +12,6 @@ if ( ! class_exists( 'WP_List_Table' ) ) {
  * WP_Personal_Data_Export_Requests_Table class.
  */
 class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
-	/**
-	 * Set items from data.
-	 *
-	 * @param array $data Items being shown.
-	 */
-	public function set_items( $data ) {
-		$this->items = $data;
-	}
 
 	/**
 	 * Get columns to show in the list table.
@@ -41,13 +33,55 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 	 * Prepare items to output.
 	 */
 	public function prepare_items() {
-		global $export_requests;
+		global $wpdb;
 
-		$columns               = $this->get_columns();
-		$hidden                = array();
-		$sortable              = array();
-		$this->_column_headers = array( $columns, $hidden, $sortable );
-		$this->items           = $export_requests;
+		$this->_column_headers = array( 
+			$this->get_columns(), 
+			array(), 
+			array(
+				'requested',
+				'confirmed',
+			), 
+		);
+
+		$this->items    = array();
+		$posts_per_page = 20;
+		$args           = array(
+			'post_type'      => 'privacy_request',
+			'posts_per_page' => $posts_per_page,
+			'offset'         => isset( $_REQUEST['paged'] ) ? max( 0, absint( $_REQUEST['paged'] ) - 1 ) * $posts_per_page: 0,
+			'post_status'    => 'any',
+		);
+
+		if ( ! empty( $_REQUEST['s'] ) ) {
+			$args['meta_query'] = array(
+				array(
+					'key'     => '_user_email',
+					'value'   => isset( $_REQUEST['s'] ) ? sanitize_text_field( $_REQUEST['s'] ): '',
+					'compare' => 'LIKE'
+				),
+			);
+		}
+
+		$privacy_requests_query = new WP_Query( $args );
+		$privacy_requests       = $privacy_requests_query->posts;
+
+		foreach ( $privacy_requests as $privacy_request ) {
+			$this->items[] = array(
+				'user_id'   => $privacy_request->post_author,
+				'email'     => get_post_meta( $privacy_request->ID, '_user_email', true ),
+				'action'    => get_post_meta( $privacy_request->ID, '_action_name', true ),
+				'requested' => strtotime( $privacy_request->post_date_gmt ),
+				'confirmed' => get_post_meta( $privacy_request->ID, '_confirmed_timestamp', true ),
+			);
+		}
+
+		$this->set_pagination_args(
+			array(
+				'total_items' => $privacy_requests_query->found_posts,
+				'per_page'    => $posts_per_page,
+			)
+		);
 	}
 
 	/**

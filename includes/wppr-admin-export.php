@@ -74,15 +74,16 @@ function _wp_privacy_export_requests_page() {
 		}
 	}
 
-	global $export_requests;
-	$export_requests =_wp_privacy_get_all_unconfirmed_personal_data_export_requests();
 	$requests_table = new WP_Personal_Data_Export_Requests_Table();
-	$requests_table->set_items( $export_requests );
-
+	$requests_table->prepare_items();
 	?>
 	<div class="wrap nosubsub">
 		<h1><?php _e( 'Personal Data Requests' ); ?></h1>
 		<hr class="wp-header-end" />
+		<form class="search-form wp-clearfix">
+			<?php $requests_table->search_box( __( 'Search requests' ), 'requests' ); ?>
+			<input type="hidden" name="page" value="wp-privacy-export-requests" />
+		</form>
 		<?php settings_errors(); ?>
 		<div id="col-container" class="wp-clearfix">
 			<div id="col-left">
@@ -115,7 +116,6 @@ function _wp_privacy_export_requests_page() {
 			<div id="col-right">
 				<div class="col-wrap">
 				<?php
-				$requests_table->prepare_items();
 				$requests_table->display();
 				?>
 				</div>
