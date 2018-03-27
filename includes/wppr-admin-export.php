@@ -104,7 +104,7 @@ function _wp_privacy_requests_page() {
 	$requests_table->prepare_items();
 	?>
 	<div class="wrap nosubsub">
-		<h1><?php _e( 'Personal Data Requests' ); ?></h1>
+		<h1><?php esc_html_e( 'Personal Data Requests' ); ?></h1>
 		<hr class="wp-header-end" />
 		<form class="search-form wp-clearfix">
 			<?php $requests_table->search_box( __( 'Search requests' ), 'requests' ); ?>
@@ -112,14 +112,15 @@ function _wp_privacy_requests_page() {
 			<input type="hidden" name="filter-action" value="<?php echo isset( $_REQUEST['filter-action'] ) ? esc_attr( sanitize_text_field( $_REQUEST['filter-action'] ) ) : ''; ?>" />
 			<input type="hidden" name="filter-status" value="<?php echo isset( $_REQUEST['filter-status'] ) ? esc_attr( sanitize_text_field( $_REQUEST['filter-status'] ) ) : ''; ?>" />
 			<input type="hidden" name="orderby" value="<?php echo isset( $_REQUEST['orderby'] ) ? esc_attr( sanitize_text_field( $_REQUEST['orderby'] ) ) : ''; ?>" />
+			<input type="hidden" name="order" value="<?php echo isset( $_REQUEST['order'] ) ? esc_attr( sanitize_text_field( $_REQUEST['order'] ) ) : ''; ?>" />
 		</form>
 		<?php settings_errors(); ?>
 		<div id="col-container" class="wp-clearfix">
 			<div id="col-left">
 				<div class="col-wrap">
 					<div class="form-wrap">
-						<h2><?php _e( 'New Request' ); ?></h2>
-						<p><?php _e( 'An email will be sent to the user at this email address, asking them to verify the request.' ); ?></p>
+						<h2><?php esc_html_e( 'New Request' ); ?></h2>
+						<p><?php esc_html_e( 'An email will be sent to the user at this email address, asking them to verify the request.' ); ?></p>
 
 						<form method="post">
 							<input type="hidden" name="action" value="add-personal-data-request" />
