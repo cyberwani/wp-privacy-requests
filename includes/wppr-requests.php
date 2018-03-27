@@ -32,30 +32,17 @@ function _wp_privacy_post_types() {
 			'delete_with_user' => false,
 		)
 	);
-	register_post_status(
-		'pending', array(
-			'label'               => __( 'Pending' ),
-			'internal'            => true,
-			'_builtin'            => true, /* internal use only. */
-			'exclude_from_search' => false,
-		)
-	);
-	register_post_status(
-		'confirmed', array(
-			'label'               => __( 'Confirmed' ),
-			'internal'            => true,
-			'_builtin'            => true, /* internal use only. */
-			'exclude_from_search' => false,
-		)
-	);
-	register_post_status(
-		'failed', array(
-			'label'               => __( 'Failed' ),
-			'internal'            => true,
-			'_builtin'            => true, /* internal use only. */
-			'exclude_from_search' => false,
-		)
-	);
+
+	foreach ( _wp_privacy_statuses() as $name => $label ) {
+		register_post_status(
+			$name, array(
+				'label'               => $label,
+				'internal'            => true,
+				'_builtin'            => true, /* internal use only. */
+				'exclude_from_search' => false,
+			)
+		);
+	}
 }
 
 /**
@@ -76,7 +63,7 @@ function _wp_privacy_create_request( $email_address, $action, $description ) {
 
 	$privacy_request_id = wp_insert_post( array(
 		'post_author'   => $user_id,
-		'post_status'   => 'pending',
+		'post_status'   => 'action-pending',
 		'post_type'     => 'privacy_request',
 		'post_date'     => current_time( 'mysql', false ),
 		'post_date_gmt' => current_time( 'mysql', true ),
@@ -112,7 +99,7 @@ function _wp_privacy_account_action_confirmed( $result ) {
 		update_post_meta( $privacy_request_id, '_confirmed_timestamp', time() );
 		wp_update_post( array(
 			'ID'          => $privacy_request_id,
-			'post_status' => 'confirmed',
+			'post_status' => 'action-confirmed',
 		), $wp_error );
 	}
 }
@@ -133,7 +120,7 @@ function _wp_privacy_account_action_failed( $result ) {
 
 		wp_update_post( array(
 			'ID'          => $privacy_request_id,
-			'post_status' => 'failed',
+			'post_status' => 'action-failed',
 		), $wp_error );
 	}
 }

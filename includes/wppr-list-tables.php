@@ -21,7 +21,7 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 		$columns = array(
 			'cb'        => '<input type = "checkbox" />',
 			'email'     => __( 'Requester' ),
-			'type'      => __( 'Type' ),
+			'type'      => __( 'Action' ),
 			'status'    => __( 'Status' ),
 			'requested' => __( 'Requested' ),
 			'confirmed' => __( 'Confirmed' ),
@@ -52,14 +52,45 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 	}
 
 	/**
+	 * Filters.
+	 *
+	 * @param string $which
+	 */
+	protected function extra_tablenav( $which ) {
+		echo '<div class="alignleft actions">';
+
+		if ( 'top' === $which ) {
+			$filter_action = isset( $_REQUEST['filter-action'] ) ? sanitize_text_field( $_REQUEST['filter-action'] ) : '';
+			$filter_status = isset( $_REQUEST['filter-status'] ) ? sanitize_text_field( $_REQUEST['filter-status'] ) : '';
+			?>
+			<select name="filter-action">
+				<option value=""><?php esc_html_e( 'Show all action types' ); ?></option>
+				<?php foreach ( _wp_privacy_actions() as $name => $label ) : ?>
+					<option <?php selected( $filter_action, $name ); ?> value="<?php echo esc_attr( $name ); ?>"><?php echo esc_html( $label ); ?></option>
+				<?php endforeach; ?>
+			</select>
+			<select name="filter-status">
+				<option value=""><?php esc_html_e( 'Show all statuses' ); ?></option>
+				<?php foreach ( _wp_privacy_statuses() as $name => $label ) : ?>
+					<option <?php selected( $filter_status, $name ); ?> value="<?php echo esc_attr( $name ); ?>"><?php echo esc_html( $label ); ?></option>
+				<?php endforeach; ?>
+			</select>
+			<?php
+			submit_button( __( 'Filter' ), '', 'filter_action', false );
+		}
+
+		echo '</div>';
+	}
+
+	/**
 	 * Get bulk actions.
 	 *
 	 * @return array
 	 */
 	protected function get_bulk_actions() {
 		return array(
-			'delete' => __( 'Delete requests' ),
-			'resend' => __( 'Re-send verification email' ),
+			'delete' => __( 'Delete request(s)' ),
+			'resend' => __( 'Re-send verification email(s)' ),
 		);
 	}
 
@@ -72,7 +103,7 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 		}
 
 		$action      = $this->current_action();
-		$request_ids = wp_parse_id_list( $_POST['request_id'] );
+		$request_ids = isset( $_POST['request_id'] ) ? wp_parse_id_list( $_POST['request_id'] ) : array();
 
 		switch ( $action ) {
 			case 'delete':
@@ -91,7 +122,7 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 						) );
 						wp_update_post( array(
 							'ID'            => $request_id,
-							'post_status'   => 'pending',
+							'post_status'   => 'action-pending',
 							'post_date'     => current_time( 'mysql', false ),
 							'post_date_gmt' => current_time( 'mysql', true ),
 						), $wp_error );
@@ -124,7 +155,21 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 			'posts_per_page' => $posts_per_page,
 			'offset'         => isset( $_REQUEST['paged'] ) ? max( 0, absint( $_REQUEST['paged'] ) - 1 ) * $posts_per_page: 0,
 			'post_status'    => 'any',
+			'meta_query'     => array(),
 		);
+
+		if ( ! empty( $_REQUEST['filter-action'] ) ) {
+			$filter_action        = isset( $_REQUEST['filter-action'] ) ? sanitize_text_field( $_REQUEST['filter-action'] ) : '';
+			$args['meta_query'][] = array(
+				'key'   => '_action_name',
+				'value' => $filter_action,
+			);
+		}
+
+		if ( ! empty( $_REQUEST['filter-status'] ) ) {
+			$filter_status       = isset( $_REQUEST['filter-status'] ) ? sanitize_text_field( $_REQUEST['filter-status'] ) : '';
+			$args['post_status'] = $filter_status;
+		}
 
 		if ( ! empty( $_REQUEST['orderby'] ) ) {
 			$orderby = sanitize_text_field( $_REQUEST['orderby'] );
@@ -196,8 +241,9 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 	 * @return string
 	 */
 	public function column_status( $item ) {
-		$status_object = get_post_status_object( get_post_status( $item['request_id'] ) );
-		return $status_object && ! empty( $status_object->label ) ? esc_html( $status_object->label ) : '-';
+		$status = get_post_status( $item['request_id'] );
+		$status_object = get_post_status_object( $status );
+		return $status_object && ! empty( $status_object->label ) ? '<span class="status-label status-' . esc_attr( $status ) . '">' . esc_html( $status_object->label ) . '</span>' : '-';
 	}
 
 	/**
@@ -236,20 +282,19 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 	 * @return string
 	 */
 	public function column_email( $item ) {
-		// TODO links, nonces
-
 		$row_actions = array();
+
 		if ( 'remove_personal_data' === $item['action'] ) {
 			$row_actions['remove_data'] = __( 'Remove personal data' );
-			// If we have a user ID, include a delete user action
+
+			// If we have a user ID, include a delete user action.
 			if ( ! empty( $item['user_id'] ) ) {
 				$delete_user_url            = wp_nonce_url( "users.php?action=delete&amp;user={$item['user_id']}", 'bulk-users' );
 				$row_actions['delete_user'] = "<a class='submitdelete' href='" . $delete_user_url . "'>" . __( 'Delete User' ) . '</a>';
 			}
+
 		} else if ( 'export_personal_data' === $item['action'] ) {
-			$email = esc_attr( $item['email'] );
-			$nonce = '';
-			$row_actions['download_data'] = "<a class='download_personal_data' href='#' data-email='$email'>" . __( 'Download Personal Data' ) . '</a>';
+			$row_actions['download_data'] = '<a class="download_personal_data" href="#" data-email="' . esc_attr( $item['email'] ) . '">' . __( 'Download Personal Data' ) . '</a>';
 			$row_actions['email_data']    = __( 'Email personal data to user' );
 		}
 
@@ -265,9 +310,9 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 	public function column_type( $item ) {
 		switch ( $item['action'] ) {
 			case 'remove_personal_data':
-				return esc_html__( 'Remove' );
+				return '<span class="dashicons dashicons-trash" title="' . esc_attr__( 'Personal data removal' ) .'"></span>';
 			case 'export_personal_data':
-				return esc_html__( 'Export' );
+				return '<span class="dashicons dashicons-download" title="' . esc_attr__( 'Personal data export' ) .'"></span>';
 		}
 	}
 

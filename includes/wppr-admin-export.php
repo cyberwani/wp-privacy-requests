@@ -4,8 +4,38 @@ if ( ! defined( 'ABSPATH' ) ) {
 	exit;
 }
 
+/**
+ * TODO: Move the core CSS when merged :)
+ */
+add_action( 'admin_enqueue_scripts', '_wp_privacy_requests_styles' );
 
-function _wp_privacy_export_requests_page() {
+function _wp_privacy_requests_styles() {
+	wp_add_inline_style( 'list-tables', '
+		.privacy_requests .column-email {
+			width: 40%;
+		}
+		.privacy_requests .column-type {
+			text-align: center;
+		}
+		.privacy_requests .column-status .status-label {
+			font-size: 0.83em;
+			padding: 6px 9px;
+			background: #ddd;
+			border-radius: 3px;
+			border-bottom: 1px solid rgba(0,0,0,.05);
+		}
+		.privacy_requests .column-status .status-action-confirmed {
+			background: #C6E1C6;
+			color: #5b841b;
+		}
+		.privacy_requests .column-status .status-action-failed {
+			background: #eba3a3;
+    		color: #761919;
+		}
+	' );
+}
+
+function _wp_privacy_requests_page() {
 	if ( ! current_user_can( 'manage_options' ) ) {
 		wp_die( __( 'Sorry, you are not allowed to manage privacy on this site.' ) );
 	}
@@ -78,7 +108,10 @@ function _wp_privacy_export_requests_page() {
 		<hr class="wp-header-end" />
 		<form class="search-form wp-clearfix">
 			<?php $requests_table->search_box( __( 'Search requests' ), 'requests' ); ?>
-			<input type="hidden" name="page" value="wp-privacy-export-requests" />
+			<input type="hidden" name="page" value="wp-privacy-requests" />
+			<input type="hidden" name="filter-action" value="<?php echo isset( $_REQUEST['filter-action'] ) ? esc_attr( sanitize_text_field( $_REQUEST['filter-action'] ) ) : ''; ?>" />
+			<input type="hidden" name="filter-status" value="<?php echo isset( $_REQUEST['filter-status'] ) ? esc_attr( sanitize_text_field( $_REQUEST['filter-status'] ) ) : ''; ?>" />
+			<input type="hidden" name="orderby" value="<?php echo isset( $_REQUEST['orderby'] ) ? esc_attr( sanitize_text_field( $_REQUEST['orderby'] ) ) : ''; ?>" />
 		</form>
 		<?php settings_errors(); ?>
 		<div id="col-container" class="wp-clearfix">
@@ -95,8 +128,9 @@ function _wp_privacy_export_requests_page() {
 								<div class="form-field form-required">
 									<label for="type_of_action"><?php _e( 'Type of action to request' ); ?></label>
 									<select id="type_of_action" name="type_of_action">
-										<option value="export_personal_data"><?php esc_html_e( 'Personal data export' ); ?></option>
-										<option value="remove_personal_data"><?php esc_html_e( 'Personal data removal' ); ?></option>
+										<?php foreach ( _wp_privacy_actions() as $value => $label ) : ?>
+											<option value="<?php echo esc_attr( $value ); ?>"><?php echo esc_html( $label ); ?></option>
+										<?php endforeach; ?>
 									</select>
 								</div>
 								<div class="form-field form-required">
@@ -124,7 +158,32 @@ function _wp_privacy_export_requests_page() {
 	<?php
 }
 
+/**
+ * Return actions that can be performed.
+ *
+ * @return array
+ */
+function _wp_privacy_actions() {
+	return array(
+		'export_personal_data' => __( 'Personal data export' ),
+		'remove_personal_data' => __( 'Personal data removal' ),
+	);
+}
+
+/**
+ * Return statuses for requests.
+ *
+ * @return array
+ */
+function _wp_privacy_statuses() {
+	return array(
+		'action-pending'   => __( 'Pending' ), // Pending confirmation from user.
+		'action-confirmed' => __( 'Confirmed' ), // User has confirmed the action.
+		'action-failed'    => __( 'Failed' ), // User failed to confirm the action.
+	);
+}
+
 function _wp_privacy_hook_export_requests_page() {
-	add_submenu_page( 'tools.php', __( 'Personal Data Export' ), __( 'Personal Data Export' ), 'manage_options', 'wp-privacy-export-requests', '_wp_privacy_export_requests_page' );
+	add_submenu_page( 'tools.php', __( 'Personal Data Requests' ), __( 'Personal Data Requests' ), 'manage_options', 'wp-privacy-requests', '_wp_privacy_requests_page' );
 }
 add_action( 'admin_menu', '_wp_privacy_hook_export_requests_page' );
