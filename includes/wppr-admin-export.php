@@ -114,6 +114,7 @@ function _wp_privacy_export_requests_page() {
 				<form method="post">
 					<?php
 					$requests_table->display();
+					$requests_table->embed_scripts();
 					?>
 				</form>
 				</div>
