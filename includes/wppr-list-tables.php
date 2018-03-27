@@ -295,6 +295,7 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 
 					$( '.download_personal_data' ).click( function() {
 						var downloadData = $( this );
+						var emailForExport = downloadData.data( 'email' );
 						downloadData.blur();
 						var checkColumn = downloadData.parents( 'tr' ).find( '.check-column' );
 
@@ -338,7 +339,7 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 								url: ajaxurl,
 								data: {
 									action: 'wp-privacy-export-personal-data',
-									email: 'allendavidsnook+svn@gmail.com',
+									email: emailForExport,
 									exporter: exporterIndex,
 									page: pageIndex,
 									security: nonce,
