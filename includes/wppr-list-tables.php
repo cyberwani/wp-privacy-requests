@@ -64,7 +64,7 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 	}
 
 	/**
-	 * Process bylk actions.
+	 * Process bulk actions.
 	 */
 	public function process_bulk_action() {
 		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( $_POST['_wpnonce'], 'bulk-privacy_requests' ) ) {
@@ -110,9 +110,9 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 		$this->process_bulk_action();
 
 		$primary               = $this->get_primary_column_name();
-		$this->_column_headers = array( 
-			$this->get_columns(), 
-			array(), 
+		$this->_column_headers = array(
+			$this->get_columns(),
+			array(),
 			$this->get_sortable_columns(),
 			$primary,
 		);
@@ -186,7 +186,7 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 	 * @return string
 	 */
 	public function column_cb( $item ) {
-		return sprintf( '<input type="checkbox" name="request_id[]" value="%1$s" />', esc_attr( $item['request_id'] ) );
+		return sprintf( '<input type="checkbox" name="request_id[]" value="%1$s" /><span class="spinner"></span>', esc_attr( $item['request_id'] ) );
 	}
 
 	/**
@@ -238,9 +238,20 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 	public function column_email( $item ) {
 		// TODO links, nonces
 
-		$row_actions = array(
-			'something' => __( 'Put action specific links here' ),
-		);
+		$row_actions = array();
+		if ( 'remove_personal_data' === $item['action'] ) {
+			$row_actions['remove_data'] = __( 'Remove personal data' );
+			// If we have a user ID, include a delete user action
+			if ( ! empty( $item['user_id'] ) ) {
+				$delete_user_url            = wp_nonce_url( "users.php?action=delete&amp;user={$item['user_id']}", 'bulk-users' );
+				$row_actions['delete_user'] = "<a class='submitdelete' href='" . $delete_user_url . "'>" . __( 'Delete User' ) . '</a>';
+			}
+		} else if ( 'export_personal_data' === $item['action'] ) {
+			$email = esc_attr( $item['email'] );
+			$nonce = '';
+			$row_actions['download_data'] = "<a class='download_personal_data' href='#' data-email='$email'>" . __( 'Download Personal Data' ) . '</a>';
+			$row_actions['email_data']    = __( 'Email personal data to user' );
+		}
 
 		return sprintf( '%1$s %2$s', $item['email'], $this->row_actions( $row_actions ) );
 	}
@@ -260,18 +271,106 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 		}
 	}
 
-	/**
-	 * Actions column.
-	 *
-	 * @param array $item Item being shown.
-	 * @return string
-	 */
-	public function column_actions( $item ) {
-		switch ( $item['action'] ) {
-			case 'remove_personal_data':
-			case 'export_personal_data':
-				return '<a href="#">Download</a> | <a href="#">Send via Email</a>';
-				break;
+	public function embed_scripts() {
+		$this->embed_exporter_script();
+	}
+
+	public function embed_exporter_script() {
+		$exporters = apply_filters( 'wp_privacy_personal_data_exporters', array() );
+
+		$exporter_names = array();
+		foreach ( ( array ) $exporters as $exporter ) {
+			$exporter_names[] = $exporter['exporter_friendly_name'];
 		}
+
+		?>
+		<script>
+			( function( $ ) {
+				$( document ).ready( function() {
+					var nonce = <?php echo json_encode( wp_create_nonce( 'wp-privacy-export-personal-data' ) ); ?>;
+					var exporterNames = <?php echo json_encode( $exporter_names ); ?>;
+					var successMessage = "<?php echo esc_attr( __( 'Export completed successfully' ) ); ?>";
+					var failureMessage = "<?php echo esc_attr( __( 'A failure occurred during export' ) ); ?>";
+					var spinnerUrl = "<?php echo esc_url( admin_url( '/images/wpspin_light.gif' ) ); ?>";
+
+					$( '.download_personal_data' ).click( function() {
+						var downloadData = $( this );
+						downloadData.blur();
+						var checkColumn = downloadData.parents( 'tr' ).find( '.check-column' );
+
+						function set_row_busy() {
+							downloadData.parents( '.row-actions' ).hide();
+							checkColumn.find( 'input' ).hide();
+							checkColumn.find( '.spinner' ).css( {
+								background: 'url( ' + spinnerUrl + ' ) no-repeat',
+								'background-size': '16px 16px',
+								float: 'right',
+								opacity: '.7',
+								filter: 'alpha(opacity=70)',
+								width: '16px',
+								height: '16px',
+								margin: '5px 5px 0',
+								visibility: 'visible'
+							} );
+						}
+
+						function set_row_not_busy() {
+							downloadData.parents( '.row-actions' ).show();
+							checkColumn.find( '.spinner' ).hide();
+							checkColumn.find( 'input' ).show();
+						}
+
+						function on_exports_done_success( url ) {
+							set_row_not_busy();
+							alert( successMessage );
+							// TODO fetch ZIP
+							console.log( url );
+						}
+
+						function on_export_failure( textStatus, error ) {
+							set_row_not_busy();
+							alert( failureMessage );
+							alert( error );
+						}
+
+						function do_next_export( exporterIndex, pageIndex ) {
+							$.ajax( {
+								url: ajaxurl,
+								data: {
+									action: 'wp-privacy-export-personal-data',
+									email: 'allendavidsnook+svn@gmail.com',
+									exporter: exporterIndex,
+									page: pageIndex,
+									security: nonce,
+								},
+								method: 'post'
+							} ).done( function( response ) {
+								var responseData = response.data;
+								for ( var dataIndex = 0; dataIndex < responseData.data.length; dataIndex++ ) {
+									console.log( responseData.data[ dataIndex ].name, responseData.data[ dataIndex ].value );
+								}
+								if ( ! responseData.done ) {
+									setTimeout( do_next_export( exporterIndex, pageIndex + 1 ) );
+								} else {
+									if ( exporterIndex < exporterNames.length - 1 ) {
+										setTimeout( do_next_export( exporterIndex + 1, 0 ) );
+									} else {
+										console.log( responseData );
+										on_exports_done_success( responseData.url );
+									}
+								}
+							} ).fail( function( jqxhr, textStatus, error ) {
+								on_export_failure( textStatus, error );
+							} );
+						}
+
+						// And now, let's begin
+						set_row_busy();
+						do_next_export( 0, 0 );
+					} )
+				} );
+			} ( jQuery ) );
+		</script>
+		<?php
 	}
 }
