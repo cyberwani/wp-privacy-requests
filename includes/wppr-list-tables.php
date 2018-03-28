@@ -396,14 +396,11 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 								method: 'post'
 							} ).done( function( response ) {
 								var responseData = response.data;
-								for ( var dataIndex = 0; dataIndex < responseData.data.length; dataIndex++ ) {
-									console.log( responseData.data[ dataIndex ].name, responseData.data[ dataIndex ].value );
-								}
 								if ( ! responseData.done ) {
 									setTimeout( do_next_export( exporterIndex, pageIndex + 1 ) );
 								} else {
-									if ( exporterIndex < exporterNames.length - 1 ) {
-										setTimeout( do_next_export( exporterIndex + 1, 0 ) );
+									if ( exporterIndex < exporterNames.length ) {
+										setTimeout( do_next_export( exporterIndex + 1, 1 ) );
 									} else {
 										console.log( responseData );
 										on_exports_done_success( responseData.url );
@@ -416,7 +413,7 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 
 						// And now, let's begin
 						set_row_busy();
-						do_next_export( 0, 0 );
+						do_next_export( 1, 1 );
 					} )
 				} );
 			} ( jQuery ) );
