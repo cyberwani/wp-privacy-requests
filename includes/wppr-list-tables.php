@@ -368,9 +368,13 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 
 						function on_exports_done_success( url ) {
 							set_row_not_busy();
-							alert( successMessage );
-							// TODO fetch ZIP
-							console.log( url );
+							// TODO - simplify once 43551 has landed - we won't need to test for a url
+							// nor show the successMessage then - we can just kick off the ZIP download
+							if ( url ) {
+								window.location = url; // kick off ZIP download
+							} else {
+								alert( successMessage );
+							}
 						}
 
 						function on_export_failure( textStatus, error ) {
