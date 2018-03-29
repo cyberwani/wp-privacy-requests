@@ -285,7 +285,7 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 		$row_actions = array();
 
 		if ( 'remove_personal_data' === $item['action'] ) {
-			$row_actions['remove_data'] = __( 'Remove personal data' );
+			$row_actions['remove_data'] = '<a class="remove_personal_data" href="#" data-email="' . esc_attr( $item['email'] ) . '">' . __( 'Remove Personal Data' ) . '</a>';
 
 			// If we have a user ID, include a delete user action.
 			if ( ! empty( $item['user_id'] ) ) {
@@ -322,52 +322,50 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 
 	public function embed_exporter_script() {
 		$exporters = apply_filters( 'wp_privacy_personal_data_exporters', array() );
-
-		$exporter_names = array();
-		foreach ( ( array ) $exporters as $exporter ) {
-			$exporter_names[] = $exporter['exporter_friendly_name'];
-		}
+		$erasers = apply_filters( 'wp_privacy_personal_data_erasers', array() );
 
 		?>
 		<script>
 			( function( $ ) {
 				$( document ).ready( function() {
-					var nonce = <?php echo json_encode( wp_create_nonce( 'wp-privacy-export-personal-data' ) ); ?>;
-					var exporterNames = <?php echo json_encode( $exporter_names ); ?>;
-					var successMessage = "<?php echo esc_attr( __( 'Export completed successfully' ) ); ?>";
-					var failureMessage = "<?php echo esc_attr( __( 'A failure occurred during export' ) ); ?>";
+					var successMessage = "<?php echo esc_attr( __( 'Action completed successfully' ) ); ?>";
+					var failureMessage = "<?php echo esc_attr( __( 'A failure occurred during processing' ) ); ?>";
 					var spinnerUrl = "<?php echo esc_url( admin_url( '/images/wpspin_light.gif' ) ); ?>";
 
+					function set_request_busy( actionEl ) {
+						actionEl.parents( '.row-actions' ).hide();
+						var checkColumn = actionEl.parents( 'tr' ).find( '.check-column' );
+						checkColumn.find( 'input' ).hide();
+						checkColumn.find( '.spinner' ).css( {
+							background: 'url( ' + spinnerUrl + ' ) no-repeat',
+							'background-size': '16px 16px',
+							float: 'right',
+							opacity: '.7',
+							filter: 'alpha(opacity=70)',
+							width: '16px',
+							height: '16px',
+							margin: '5px 5px 0',
+							visibility: 'visible'
+						} );
+					}
+
+					function set_request_not_busy( actionEl ) {
+						actionEl.parents( '.row-actions' ).show();
+						var checkColumn = actionEl.parents( 'tr' ).find( '.check-column' );
+						checkColumn.find( '.spinner' ).hide();
+						checkColumn.find( 'input' ).show();
+					}
+
 					$( '.download_personal_data' ).click( function() {
-						var downloadData = $( this );
-						var emailForExport = downloadData.data( 'email' );
-						downloadData.blur();
-						var checkColumn = downloadData.parents( 'tr' ).find( '.check-column' );
+						var exportNonce = <?php echo json_encode( wp_create_nonce( 'wp-privacy-export-personal-data' ) ); ?>;
+						var exportersCount = <?php echo json_encode( count( $exporters ) ); ?>;
 
-						function set_row_busy() {
-							downloadData.parents( '.row-actions' ).hide();
-							checkColumn.find( 'input' ).hide();
-							checkColumn.find( '.spinner' ).css( {
-								background: 'url( ' + spinnerUrl + ' ) no-repeat',
-								'background-size': '16px 16px',
-								float: 'right',
-								opacity: '.7',
-								filter: 'alpha(opacity=70)',
-								width: '16px',
-								height: '16px',
-								margin: '5px 5px 0',
-								visibility: 'visible'
-							} );
-						}
-
-						function set_row_not_busy() {
-							downloadData.parents( '.row-actions' ).show();
-							checkColumn.find( '.spinner' ).hide();
-							checkColumn.find( 'input' ).show();
-						}
+						var actionEl = $( this );
+						var emailForExport = actionEl.data( 'email' );
+						actionEl.blur();
 
 						function on_exports_done_success( url ) {
-							set_row_not_busy();
+							set_request_not_busy( actionEl );
 							// TODO - simplify once 43551 has landed - we won't need to test for a url
 							// nor show the successMessage then - we can just kick off the ZIP download
 							if ( url ) {
@@ -378,7 +376,7 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 						}
 
 						function on_export_failure( textStatus, error ) {
-							set_row_not_busy();
+							set_request_not_busy( actionEl );
 							alert( failureMessage );
 							alert( error );
 						}
@@ -391,7 +389,7 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 									email: emailForExport,
 									exporter: exporterIndex,
 									page: pageIndex,
-									security: nonce,
+									security: exportNonce,
 								},
 								method: 'post'
 							} ).done( function( response ) {
@@ -399,7 +397,7 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 								if ( ! responseData.done ) {
 									setTimeout( do_next_export( exporterIndex, pageIndex + 1 ) );
 								} else {
-									if ( exporterIndex < exporterNames.length ) {
+									if ( exporterIndex < exportersCount ) {
 										setTimeout( do_next_export( exporterIndex + 1, 1 ) );
 									} else {
 										console.log( responseData );
@@ -412,8 +410,59 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 						}
 
 						// And now, let's begin
-						set_row_busy();
+						set_request_busy( actionEl );
 						do_next_export( 1, 1 );
+					} )
+
+					$( '.remove_personal_data' ).click( function() {
+						var eraseNonce = <?php echo json_encode( wp_create_nonce( 'wp-privacy-erase-personal-data' ) ); ?>;
+						var erasersCount = <?php echo json_encode( count( $erasers ) ); ?>;
+
+						var actionEl = $( this );
+						var emailForErasure = actionEl.data( 'email' );
+						actionEl.blur();
+
+						function on_erase_done_success( url ) {
+							set_request_not_busy( actionEl );
+							alert( successMessage );
+						}
+
+						function on_erase_failure( textStatus, error ) {
+							set_request_not_busy( actionEl );
+							alert( failureMessage );
+							alert( error );
+						}
+
+						function do_next_erasure( eraserIndex, pageIndex ) {
+							$.ajax( {
+								url: ajaxurl,
+								data: {
+									action: 'wp-privacy-erase-personal-data',
+									email: emailForErasure,
+									eraser: eraserIndex,
+									page: pageIndex,
+									security: eraseNonce,
+								},
+								method: 'post'
+							} ).done( function( response ) {
+								var responseData = response.data;
+								if ( ! responseData.done ) {
+									setTimeout( do_next_erasure( eraserIndex, pageIndex + 1 ) );
+								} else {
+									if ( eraserIndex < erasersCount ) {
+										setTimeout( do_next_erasure( eraserIndex + 1, 1 ) );
+									} else {
+										on_erase_done_success( responseData.url );
+									}
+								}
+							} ).fail( function( jqxhr, textStatus, error ) {
+								on_erase_failure( textStatus, error );
+							} );
+						}
+
+						// And now, let's begin
+						set_request_busy( actionEl );
+						do_next_erasure( 1, 1 );
 					} )
 				} );
 			} ( jQuery ) );
