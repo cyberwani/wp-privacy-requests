@@ -5,15 +5,10 @@ Temporary plugin to develop the administrative UI for core WordPress privacy req
  - First, set up the test environment ( assuming wordpress-svn working copy in `~/sites/localhost/wordpress-svn`) by doing the following:
 
 ```
-# Revert all changes
+# Revert any changes
 cd ~/sites/localhost/wordpress-svn
 svn revert -R .
 svn up
-
-# Apply latest patch from https://core.trac.wordpress.org/ticket/43443
-# This adds the latest version of the email confirmation code
-cd src
-patch -p0 < 43443.4.diff
 
 cd ~/sites/localhost/wordpress-svn/src/wp-content/plugins
 
