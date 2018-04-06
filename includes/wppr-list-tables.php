@@ -1,8 +1,5 @@
 <?php
-
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
+defined( 'ABSPATH' ) || exit;
 
 if ( ! class_exists( 'WP_List_Table' ) ) {
 	require_once( ABSPATH . 'wp-admin/includes/class-wp-list-table.php' );
@@ -19,12 +16,11 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 	 */
 	public function get_columns() {
 		$columns = array(
-			'cb'        => '<input type = "checkbox" />',
-			'email'     => __( 'Requester' ),
-			'type'      => __( 'Action' ),
-			'status'    => __( 'Status' ),
-			'requested' => __( 'Requested' ),
-			'confirmed' => __( 'Confirmed' ),
+			'cb'         => '<input type="checkbox" />',
+			'email'      => __( 'Requester' ),
+			'status'     => __( 'Status' ),
+			'requested'  => __( 'Requested' ),
+			'next_steps' => __( 'Next Steps' ),
 		);
 		return $columns;
 	}
@@ -35,11 +31,7 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 	 * @return array
 	 */
 	protected function get_sortable_columns() {
-		return array(
-			'requested' => array( 'date', false ),
-			'confirmed' => array( 'confirmed', true ),
-			'email'     => array( 'email', true ),
-		);
+		return array();
 	}
 
 	/**
@@ -52,34 +44,25 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 	}
 
 	/**
-	 * Filters.
+	 * Get an associative array ( id => link ) with the list
+	 * of views available on this table.
 	 *
-	 * @param string $which
+	 * @return array
 	 */
-	protected function extra_tablenav( $which ) {
-		echo '<div class="alignleft actions">';
+	protected function get_views() {
+		$current_status = isset( $_REQUEST['filter-status'] ) ? sanitize_text_field( $_REQUEST['filter-status'] ): '';
+		$statuses       = _wp_privacy_statuses();
+		$views          = array();
 
-		if ( 'top' === $which ) {
-			$filter_action = isset( $_REQUEST['filter-action'] ) ? sanitize_text_field( $_REQUEST['filter-action'] ) : '';
-			$filter_status = isset( $_REQUEST['filter-status'] ) ? sanitize_text_field( $_REQUEST['filter-status'] ) : '';
-			?>
-			<select name="filter-action">
-				<option value=""><?php esc_html_e( 'Show all action types' ); ?></option>
-				<?php foreach ( _wp_privacy_actions() as $name => $label ) : ?>
-					<option <?php selected( $filter_action, $name ); ?> value="<?php echo esc_attr( $name ); ?>"><?php echo esc_html( $label ); ?></option>
-				<?php endforeach; ?>
-			</select>
-			<select name="filter-status">
-				<option value=""><?php esc_html_e( 'Show all statuses' ); ?></option>
-				<?php foreach ( _wp_privacy_statuses() as $name => $label ) : ?>
-					<option <?php selected( $filter_status, $name ); ?> value="<?php echo esc_attr( $name ); ?>"><?php echo esc_html( $label ); ?></option>
-				<?php endforeach; ?>
-			</select>
-			<?php
-			submit_button( __( 'Filter' ), '', 'filter_action', false );
+		$current_link_attributes = empty( $current_status ) ? ' class="current" aria-current="page"' : '';
+		$views['all']            = '<a href="' . esc_url( admin_url( 'tools.php?page=wp-personal-data-export' ) ) . "\" $current_link_attributes>" . esc_html__( 'All' ) . '</a>';
+
+		foreach ( $statuses as $status => $label ) {
+			$current_link_attributes = $status === $current_status ? ' class="current" aria-current="page"' : '';
+			$views[ $status ] = '<a href="' . esc_url( add_query_arg( 'filter-status', $status, admin_url( 'tools.php?page=wp-personal-data-export' ) ) ) . "\" $current_link_attributes>" . esc_html( $label ) . '</a>';
 		}
 
-		echo '</div>';
+		return $views;
 	}
 
 	/**
@@ -89,8 +72,8 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 	 */
 	protected function get_bulk_actions() {
 		return array(
-			'delete' => __( 'Delete request(s)' ),
-			'resend' => __( 'Re-send verification email(s)' ),
+			'delete' => __( 'Remove request(s)' ),
+			'resend' => __( 'Re-send request(s)' ),
 		);
 	}
 
@@ -158,38 +141,9 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 			'meta_query'     => array(),
 		);
 
-		if ( ! empty( $_REQUEST['filter-action'] ) ) {
-			$filter_action        = isset( $_REQUEST['filter-action'] ) ? sanitize_text_field( $_REQUEST['filter-action'] ) : '';
-			$args['meta_query'][] = array(
-				'key'   => '_action_name',
-				'value' => $filter_action,
-			);
-		}
-
 		if ( ! empty( $_REQUEST['filter-status'] ) ) {
 			$filter_status       = isset( $_REQUEST['filter-status'] ) ? sanitize_text_field( $_REQUEST['filter-status'] ) : '';
 			$args['post_status'] = $filter_status;
-		}
-
-		if ( ! empty( $_REQUEST['orderby'] ) ) {
-			$orderby = sanitize_text_field( $_REQUEST['orderby'] );
-			$order   = isset( $_REQUEST['order'] ) ? strtoupper( sanitize_text_field( $_REQUEST['order'] ) ) : '';
-
-			switch ( $orderby ) {
-				case 'date':
-					$args['orderby'] = 'post_date';
-					break;
-				case 'confirmed':
-					$args['orderby']  = 'meta_value';
-					$args['meta_key'] = '_confirmed_timestamp';
-					break;
-				case 'email':
-					$args['orderby']  = 'meta_value';
-					$args['meta_key'] = '_user_email';
-					break;
-			}
-
-			$args['order'] = 'ASC' === $order ? 'ASC' : 'DESC';
 		}
 
 		if ( ! empty( $_REQUEST['s'] ) ) {
@@ -213,6 +167,7 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 				'action'     => get_post_meta( $privacy_request->ID, '_action_name', true ),
 				'requested'  => strtotime( $privacy_request->post_date_gmt ),
 				'confirmed'  => get_post_meta( $privacy_request->ID, '_confirmed_timestamp', true ),
+				'completed'  => get_post_meta( $privacy_request->ID, '_completed_timestamp', true ),
 			);
 		}
 
@@ -241,35 +196,66 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 	 * @return string
 	 */
 	public function column_status( $item ) {
-		$status = get_post_status( $item['request_id'] );
+		$status        = get_post_status( $item['request_id'] );
 		$status_object = get_post_status_object( $status );
-		return $status_object && ! empty( $status_object->label ) ? '<span class="status-label status-' . esc_attr( $status ) . '">' . esc_html( $status_object->label ) . '</span>' : '-';
+
+		if ( ! $status_object || empty( $status_object->label ) ) {
+			return '-';
+		}
+
+		$timestamp = false;
+
+		switch ( $status ) {
+			case 'action-confirmed':
+				$timestamp = $item['confirmed'];
+				break;
+			case 'action-completed':
+				$timestamp = $item['completed'];
+				break;
+		}
+
+		echo '<span class="status-label status-' . esc_attr( $status ) . '">';
+		echo esc_html( $status_object->label );
+
+		if ( $timestamp ) {
+			echo ' (' . $this->get_timestamp_as_date( $timestamp ) . ')';
+		}
+
+		echo '</span>';
+	}
+
+	/**
+	 * Convert timestamp for display.
+	 *
+	 * @param int $timestamp Event timestamp.
+	 * @return string
+	 */
+	protected function get_timestamp_as_date( $timestamp ) {
+		if ( empty( $timestamp ) ) {
+			return '';
+		}
+
+		$time_diff = current_time( 'timestamp', true ) - $timestamp;
+
+		if ( $time_diff >= 0 && $time_diff < DAY_IN_SECONDS ) {
+			return sprintf( __( '%s ago' ), human_time_diff( $timestamp ) );
+		}
+
+		return date_i18n( get_option( 'date_format' ), $timestamp );
 	}
 
 	/**
 	 * Default column handler.
 	 *
-	 * @param array $item Item being shown.
+	 * @param array $item         Item being shown.
+	 * @param string $column_name Name of column being shown.
 	 * @return string
 	 */
 	public function column_default( $item, $column_name ) {
 		$cell_value = $item[ $column_name ];
 
-		if ( in_array( $column_name, array( 'requested', 'confirmed' ), true ) ) {
-			if ( empty( $cell_value ) ) {
-				return '-';
-			}
-
-			$time_diff = current_time( 'timestamp', true ) - $cell_value;
-
-			if ( $time_diff >= 0 && $time_diff < DAY_IN_SECONDS ) {
-				return sprintf( __( '%s ago' ), human_time_diff( $cell_value ) );
-			}
-
-			return
-				date( get_option( 'date_format' ), $cell_value ) .
-				'<br>' .
-				date( get_option( 'time_format' ), $cell_value );
+		if ( in_array( $column_name, array( 'requested' ), true ) ) {
+			return $this->get_timestamp_as_date( $cell_value );
 		}
 
 		return $cell_value;
@@ -302,18 +288,44 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 	}
 
 	/**
-	 * Type column.
+	 * Next steps column.
 	 *
 	 * @param array $item Item being shown.
-	 * @return string
 	 */
-	public function column_type( $item ) {
-		switch ( $item['action'] ) {
-			case 'remove_personal_data':
-				return '<span class="dashicons dashicons-trash" title="' . esc_attr__( 'Personal data removal' ) .'"></span>';
-			case 'export_personal_data':
-				return '<span class="dashicons dashicons-download" title="' . esc_attr__( 'Personal data export' ) .'"></span>';
+	public function column_next_steps( $item ) {
+		$status = get_post_status( $item['request_id'] );
+
+		switch ( $status ) {
+			case 'action-pending':
+				esc_html_e( 'Waiting for confirmation' );
+				break;
+			case 'action-confirmed':
+				submit_button( __( 'Email Data' ), 'secondary', 'personal-data-export-send', false, array(
+					'value' => $item['request_id'],
+				) );
+				break;
+			case 'action-failed':
+				submit_button( __( 'Retry' ), 'secondary', 'personal-data-export-retry', false, array(
+					'value' => $item['request_id'],
+				) );
+				break;
+			case 'action-completed':
+				echo '<a href="' . esc_url( add_query_arg( 'delete', array( $item['request_id'] ), admin_url( 'tools.php?page=wp-personal-data-export' ) ) ) . '">' . esc_html__( 'Remove Request' ) . '</a>';
+				break;
 		}
+	}
+
+	/**
+	 * Generates content for a single row of the table
+	 *
+	 * @param object $item The current item
+	 */
+	public function single_row( $item ) {
+		$status = get_post_status( $item['request_id'] );
+
+		echo '<tr class="status-' . esc_attr( $status ) . '">';
+		$this->single_row_columns( $item );
+		echo '</tr>';
 	}
 
 	public function embed_scripts() {
@@ -323,7 +335,6 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 	public function embed_exporter_script() {
 		$exporters = apply_filters( 'wp_privacy_personal_data_exporters', array() );
 		$erasers = apply_filters( 'wp_privacy_personal_data_erasers', array() );
-
 		?>
 		<script>
 			( function( $ ) {

@@ -1,8 +1,6 @@
 <?php
+defined( 'ABSPATH' ) || exit;
 
-if ( ! defined( 'ABSPATH' ) ) {
-	exit;
-}
 
 /**
  * Move to create_initial_post_types in core when done?
