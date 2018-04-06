@@ -328,13 +328,12 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 		echo '</tr>';
 	}
 
+	/**
+	 * Embed scripts used to perform the export.
+	 */
 	public function embed_scripts() {
-		$this->embed_exporter_script();
-	}
-
-	public function embed_exporter_script() {
 		$exporters = apply_filters( 'wp_privacy_personal_data_exporters', array() );
-		$erasers = apply_filters( 'wp_privacy_personal_data_erasers', array() );
+		$erasers   = apply_filters( 'wp_privacy_personal_data_erasers', array() );
 		?>
 		<script>
 			( function( $ ) {
