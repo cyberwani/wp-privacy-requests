@@ -467,10 +467,10 @@ class WP_Personal_Data_Export_Requests_Table extends WP_Privacy_Requests_Table {
 }
 
 /**
- * WP_Personal_Data_Erasure_Requests_Table class.
+ * WP_Personal_Data_Removal_Requests_Table class.
  */
-class WP_Personal_Data_Erasure_Requests_Table extends WP_Privacy_Requests_Table {
-	const ACTION_NAME = 'personal-data-erasure';
+class WP_Personal_Data_Removal_Requests_Table extends WP_Privacy_Requests_Table {
+	const ACTION_NAME = 'remove_personal_data';
 
 	/**
 	 * Actions column.
