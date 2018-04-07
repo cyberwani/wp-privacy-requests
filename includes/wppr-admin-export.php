@@ -83,7 +83,7 @@ function _wp_personal_data_export_page() {
 			$username_or_email_address = sanitize_text_field( $_POST['username_or_email_to_export'] );
 			$email_address             = '';
 
-			if ( ! in_array( $action_type, array( 'personal-data-export' ), true ) ) {
+			if ( ! in_array( $action_type, array( 'export_personal_data' ), true ) ) {
 				add_settings_error(
 					'action_type',
 					'action_type',
@@ -162,7 +162,7 @@ function _wp_personal_data_export_page() {
 			</div>
 			<?php wp_nonce_field( 'add-personal-data-request' ); ?>
 			<input type="hidden" name="action" value="add-personal-data-request" />
-			<input type="hidden" name="type_of_action" value="personal-data-export" />
+			<input type="hidden" name="type_of_action" value="export_personal_data" />
 		</form>
 		<hr/>
 
@@ -170,7 +170,7 @@ function _wp_personal_data_export_page() {
 
 		<form class="search-form wp-clearfix">
 			<?php $requests_table->search_box( __( 'Search Requests' ), 'requests' ); ?>
-			<input type="hidden" name="page" value="wp-personal-data-export" />
+			<input type="hidden" name="page" value="export_personal_data" />
 			<input type="hidden" name="filter-status" value="<?php echo isset( $_REQUEST['filter-status'] ) ? esc_attr( sanitize_text_field( $_REQUEST['filter-status'] ) ) : ''; ?>" />
 			<input type="hidden" name="orderby" value="<?php echo isset( $_REQUEST['orderby'] ) ? esc_attr( sanitize_text_field( $_REQUEST['orderby'] ) ) : ''; ?>" />
 			<input type="hidden" name="order" value="<?php echo isset( $_REQUEST['order'] ) ? esc_attr( sanitize_text_field( $_REQUEST['order'] ) ) : ''; ?>" />
@@ -200,6 +200,6 @@ function _wp_privacy_statuses() {
 }
 
 function _wp_privacy_hook_export_requests_page() {
-	add_submenu_page( 'tools.php', __( 'Personal Data Export' ), __( 'Personal Data Export' ), 'manage_options', 'wp-personal-data-export', '_wp_personal_data_export_page' );
+	add_submenu_page( 'tools.php', __( 'Personal Data Export' ), __( 'Personal Data Export' ), 'manage_options', 'export_personal_data', '_wp_personal_data_export_page' );
 }
 add_action( 'admin_menu', '_wp_privacy_hook_export_requests_page' );
