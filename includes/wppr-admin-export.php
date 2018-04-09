@@ -139,7 +139,7 @@ function _wp_personal_data_export_page() {
 		}
 	}
 
-	$requests_table = new WP_Personal_Data_Export_Requests_Table( array(
+	$requests_table = new WP_Privacy_Data_Export_Requests_Table( array(
 		'plural'   => 'privacy_requests',
 		'singular' => 'privacy_request',
 	) );
