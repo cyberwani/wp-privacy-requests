@@ -102,7 +102,7 @@ function _wp_privacy_create_request( $email_address, $action, $description ) {
  * @param array $result Result of the action from the user.
  */
 function _wp_privacy_account_action_confirmed( $result ) {
-	if ( isset( $result['action'], $result['request_data'], $result['request_data']['privacy_request_id'] ) && in_array( $result['action'], array( 'remove_personal_data', 'export_personal_data' ), true ) ) {
+	if ( isset( $result['action'], $result['request_data'], $result['request_data']['privacy_request_id'] ) && in_array( $result['action'], _wp_privacy_action_request_types(), true ) ) {
 		$privacy_request_id = absint( $result['request_data']['privacy_request_id'] );
 		$privacy_request    = get_post( $privacy_request_id );
 
@@ -124,7 +124,7 @@ function _wp_privacy_account_action_confirmed( $result ) {
  * @param array $result Result of the action from the user.
  */
 function _wp_privacy_account_action_failed( $result ) {
-	if ( isset( $result['action'], $result['request_data'], $result['request_data']['privacy_request_id'] ) && in_array( $result['action'], array( 'remove_personal_data', 'export_personal_data' ), true ) ) {
+	if ( isset( $result['action'], $result['request_data'], $result['request_data']['privacy_request_id'] ) && in_array( $result['action'], _wp_privacy_action_request_types(), true ) ) {
 		$privacy_request_id = absint( $result['request_data']['privacy_request_id'] );
 		$privacy_request    = get_post( $privacy_request_id );
 

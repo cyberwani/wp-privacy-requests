@@ -41,12 +41,12 @@ class WP_Privacy_Data_Export_Requests_Table extends WP_Privacy_Requests_Table {
 				esc_html_e( 'Waiting for confirmation' );
 				break;
 			case 'action-confirmed':
-				submit_button( __( 'Email Data' ), 'secondary', 'personal-data-export-send', false, array(
+				submit_button( __( 'Email Data' ), 'secondary', 'export_personal_data_email_send', false, array(
 					'value' => $item['request_id'],
 				) );
 				break;
 			case 'action-failed':
-				submit_button( __( 'Retry' ), 'secondary', 'personal-data-export-retry', false, array(
+				submit_button( __( 'Retry' ), 'secondary', 'export_personal_data_email_retry', false, array(
 					'value' => $item['request_id'],
 				) );
 				break;

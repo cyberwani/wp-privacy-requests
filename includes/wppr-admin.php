@@ -68,22 +68,34 @@ function _wp_privacy_requests_styles() {
 	' );
 }
 
-function _wp_personal_data_export_page() {
-	if ( ! current_user_can( 'manage_options' ) ) {
-		wp_die( esc_html__( 'Sorry, you are not allowed to manage privacy on this site.' ) );
+/**
+ * Handle list table actions.
+ */
+function _wp_personal_data_handle_actions() {
+	$action = isset( $_POST['action'] ) ? sanitize_key( wp_unslash( $_POST['action'] ) ) : ''; // WPCS: input var ok, CSRF ok.
+
+	if ( empty( $action ) ) {
+		return;
 	}
 
-	$action = isset( $_POST['action'] ) ? $_POST['action'] : '';
+	check_admin_referer( 'personal-data-request' );
 
-	if ( ! empty( $action ) ) {
-		if ( 'add-personal-data-request' === $action && isset( $_POST['type_of_action'], $_POST['username_or_email_to_export'] ) ) {
-			check_admin_referer( $action );
-
-			$action_type               = sanitize_text_field( $_POST['type_of_action'] );
-			$username_or_email_address = sanitize_text_field( $_POST['username_or_email_to_export'] );
+	switch ( $action ) {
+		case 'add_export_personal_data_request':
+		case 'add_remove_personal_data_request':
+			if ( ! isset( $_POST['type_of_action'], $_POST['username_or_email_to_export'] ) ) { // WPCS: input var ok.
+				add_settings_error(
+					'action_type',
+					'action_type',
+					__( 'Invalid action.' ),
+					'error'
+				);
+			}
+			$action_type               = sanitize_text_field( wp_unslash( $_POST['type_of_action'] ) ); // WPCS: input var ok.
+			$username_or_email_address = sanitize_text_field( wp_unslash( $_POST['username_or_email_to_export'] ) ); // WPCS: input var ok.
 			$email_address             = '';
 
-			if ( ! in_array( $action_type, array( 'export_personal_data' ), true ) ) {
+			if ( ! in_array( $action_type, _wp_privacy_action_request_types(), true ) ) {
 				add_settings_error(
 					'action_type',
 					'action_type',
@@ -124,20 +136,32 @@ function _wp_personal_data_export_page() {
 					add_settings_error(
 						'username_or_email_to_export',
 						'username_or_email_to_export',
-						__( 'Unable to initiate export verification request.' ),
+						__( 'Unable to initiate verification request.' ),
 						'error'
 					);
 				} else {
 					add_settings_error(
 						'username_or_email_to_export',
 						'username_or_email_to_export',
-						__( 'Export verification request initiated successfully.' ),
+						__( 'Verification request initiated successfully.' ),
 						'updated'
 					);
 				}
 			}
-		}
+			break;
+		case 'export_personal_data_email_send':
+			break;
+		case 'export_personal_data_email_retry':
+			break;
 	}
+}
+
+function _wp_personal_data_export_page() {
+	if ( ! current_user_can( 'manage_options' ) ) {
+		wp_die( esc_html__( 'Sorry, you are not allowed to manage privacy on this site.' ) );
+	}
+
+	_wp_personal_data_handle_actions();
 
 	$requests_table = new WP_Privacy_Data_Export_Requests_Table( array(
 		'plural'   => 'privacy_requests',
@@ -160,8 +184,8 @@ function _wp_personal_data_export_page() {
 				<input type="text" required class="regular-text" id="username_or_email_to_export" name="username_or_email_to_export" />
 				<?php submit_button( __( 'Send Request' ), 'secondary', 'submit', false ); ?>
 			</div>
-			<?php wp_nonce_field( 'add-personal-data-request' ); ?>
-			<input type="hidden" name="action" value="add-personal-data-request" />
+			<?php wp_nonce_field( 'personal-data-request' ); ?>
+			<input type="hidden" name="action" value="add_export_personal_data_request" />
 			<input type="hidden" name="type_of_action" value="export_personal_data" />
 		</form>
 		<hr/>
@@ -191,71 +215,7 @@ function _wp_personal_data_removal_page() {
 		wp_die( esc_html__( 'Sorry, you are not allowed to manage privacy on this site.' ) );
 	}
 
-	$action = isset( $_POST['action'] ) ? $_POST['action'] : '';
-
-	if ( ! empty( $action ) ) {
-		if ( 'remove-personal-data-request' === $action && isset( $_POST['type_of_action'], $_POST['username_or_email_to_export'] ) ) {
-			check_admin_referer( $action );
-
-			$action_type               = sanitize_text_field( $_POST['type_of_action'] );
-			$username_or_email_address = sanitize_text_field( $_POST['username_or_email_to_export'] );
-			$email_address             = '';
-
-			if ( ! in_array( $action_type, array( 'remove_personal_data' ), true ) ) {
-				add_settings_error(
-					'action_type',
-					'action_type',
-					__( 'Invalid action.' ),
-					'error'
-				);
-			}
-
-			if ( ! is_email( $username_or_email_address ) ) {
-				$user = get_user_by( 'login', $username_or_email_address );
-				if ( ! $user instanceof WP_User ) {
-					add_settings_error(
-						'username_or_email_to_export',
-						'username_or_email_to_export',
-						__( 'Unable to add export request. A valid email address or username must be supplied.' ),
-						'error'
-					);
-				} else {
-					$email_address = $user->user_email;
-				}
-			} else {
-				$email_address = $username_or_email_address;
-			}
-
-			if ( ! empty( $email_address ) ) {
-				$result = false;
-
-				$result = _wp_privacy_create_request( $email_address, $action_type, _wp_privacy_action_description( $action_type ) );
-
-				if ( is_wp_error( $result ) ) {
-					add_settings_error(
-						'username_or_email_to_export',
-						'username_or_email_to_export',
-						$result->get_error_message(),
-						'error'
-					);
-				} elseif ( ! $result ) {
-					add_settings_error(
-						'username_or_email_to_export',
-						'username_or_email_to_export',
-						__( 'Unable to initiate export verification request.' ),
-						'error'
-					);
-				} else {
-					add_settings_error(
-						'username_or_email_to_export',
-						'username_or_email_to_export',
-						__( 'Export verification request initiated successfully.' ),
-						'updated'
-					);
-				}
-			}
-		}
-	}
+	_wp_personal_data_handle_actions();
 
 	$requests_table = new WP_Privacy_Data_Removal_Requests_Table( array(
 		'plural'   => 'privacy_requests',
@@ -278,8 +238,8 @@ function _wp_personal_data_removal_page() {
 				<input type="text" required class="regular-text" id="username_or_email_to_export" name="username_or_email_to_export" />
 				<?php submit_button( __( 'Send Request' ), 'secondary', 'submit', false ); ?>
 			</div>
-			<?php wp_nonce_field( 'add-personal-data-request' ); ?>
-			<input type="hidden" name="action" value="remove-personal-data-request" />
+			<?php wp_nonce_field( 'personal-data-request' ); ?>
+			<input type="hidden" name="action" value="add_remove_personal_data_request" />
 			<input type="hidden" name="type_of_action" value="remove_personal_data" />
 		</form>
 		<hr/>
