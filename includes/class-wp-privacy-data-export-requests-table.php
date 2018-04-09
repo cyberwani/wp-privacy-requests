@@ -41,7 +41,9 @@ class WP_Privacy_Data_Export_Requests_Table extends WP_Privacy_Requests_Table {
 				esc_html_e( 'Waiting for confirmation' );
 				break;
 			case 'action-confirmed':
-				submit_button( __( 'Email Data' ), 'secondary', 'export_personal_data_email_send[' . $item['request_id'] . ']', false );
+				/* Translators: %s: email address. */
+				echo '<a class="email-personal-data button button-secondary" aria-label="' . esc_attr( sprintf( __( 'Email personal data to %s' ), $item['email'] ) ) . '" role="button">' . esc_html__( 'Email data' ) . '</a>';
+				//submit_button( __( 'Email Data' ), 'secondary', 'export_personal_data_email_send[' . $item['request_id'] . ']', false );
 				break;
 			case 'action-failed':
 				submit_button( __( 'Retry' ), 'secondary', 'export_personal_data_email_retry[' . $item['request_id'] . ']', false );
@@ -64,6 +66,60 @@ class WP_Privacy_Data_Export_Requests_Table extends WP_Privacy_Requests_Table {
 		<script>
 			( function( $ ) {
 				$( document ).ready( function() {
+					// Email action.
+					function email_button_sending( $button ) {
+						$button.addClass( 'email-personal-data--sending' );
+						$button.prop( 'disabled', true );
+						$button.text( '<?php echo esc_js( __( 'Sending...' ) ); ?>' );
+					}
+
+					function email_button_sent( $button ) {
+						$button.removeClass( 'email-personal-data--sending' );
+						$button.addClass( 'email-personal-data--sent' );
+						$button.text( '<?php echo esc_js( __( 'Data sent!' ) ); ?>' );
+
+						setTimeout( function() {
+							$button.after( '<a href="#" class="remove-request"><?php echo esc_js( __( 'Remove request' ) ); ?></a>' );
+							$button.remove();
+						}, 1000 );
+					}
+
+					function email_button_failed( $button ) {
+						$button.removeClass( 'email-personal-data--sending' );
+						$button.addClass( 'email-personal-data--failed' );
+						$button.text( '<?php echo esc_js( __( 'Sending failed!' ) ); ?>' );
+
+						setTimeout( function() {
+							$button.removeClass( 'email-personal-data--failed' );
+							$button.prop( 'disabled', false );
+							$button.text( '<?php echo esc_js( __( 'Retry' ) ); ?>' );
+						}, 1000 );
+					}
+
+					$( '.email-personal-data' ).click( function() {
+						var $button = $( this );
+
+						if ( $button.hasClass( '.email-personal-data--sending' ) ){
+							return false;
+						}
+
+						email_button_sending( $button );
+
+						/**
+						 * TODO: Export and send here.
+						 * Use AJAX? Ensure request status is updated to completed.
+						 * When done, trigger sent.
+						 * Simulating delay for now:
+						 */
+						setTimeout( function() {
+							email_button_sent( $button );
+							//email_button_failed( $button );
+						}, 3000 );
+
+						return false;
+					} );
+
+					// Export action.
 					var successMessage = "<?php echo esc_attr( __( 'Action completed successfully' ) ); ?>";
 					var failureMessage = "<?php echo esc_attr( __( 'A failure occurred during processing' ) ); ?>";
 					var spinnerUrl = "<?php echo esc_url( admin_url( '/images/wpspin_light.gif' ) ); ?>";

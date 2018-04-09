@@ -65,6 +65,45 @@ function _wp_privacy_requests_styles() {
 			line-height: 1.5;
 			margin: 0;
 		}
+		.email-personal-data::before {
+			display: inline-block;
+			font: normal 20px/1 dashicons;
+			margin: 3px 5px 0 -2px;
+			speak: none;
+			-webkit-font-smoothing: antialiased;
+			-moz-osx-font-smoothing: grayscale;
+			vertical-align: top;
+		}
+		.email-personal-data--sending::before {
+			color: #f56e28;
+			content: "\f463";
+			-webkit-animation: rotation 2s infinite linear;
+			animation: rotation 2s infinite linear;
+		}
+		.email-personal-data--sent::before {
+			color: #79ba49;
+			content: "\f147";
+		}
+		@-webkit-keyframes rotation {
+			0% {
+				-webkit-transform: rotate(0deg);
+				transform: rotate(0deg);
+			}
+			100% {
+				-webkit-transform: rotate(359deg);
+				transform: rotate(359deg);
+			}
+		}
+		@keyframes rotation {
+			0% {
+				-webkit-transform: rotate(0deg);
+				transform: rotate(0deg);
+			}
+			100% {
+				-webkit-transform: rotate(359deg);
+				transform: rotate(359deg);
+			}
+		}
 	' );
 }
 
