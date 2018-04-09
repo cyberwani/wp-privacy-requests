@@ -120,7 +120,7 @@ function _wp_privacy_resend_request( $privacy_request_id ) {
 	if ( is_wp_error( $result ) ) {
 		return $result;
 	} elseif ( ! $result ) {
-		return new WP_Error( 'privacy_request_error', __( 'Unable to initiate verification request.' ) );
+		return new WP_Error( 'privacy_request_error', __( 'Unable to initiate confirmation request.' ) );
 	}
 
 	wp_update_post( array(
@@ -248,6 +248,6 @@ function _wp_privacy_statuses() {
 		'action-pending'   => __( 'Pending' ),      // Pending confirmation from user.
 		'action-confirmed' => __( 'Confirmed' ),    // User has confirmed the action.
 		'action-failed'    => __( 'Failed' ),       // User failed to confirm the action.
-		'action-completed'    => __( 'Completed' ), // Admin has handled the request.
+		'action-completed' => __( 'Completed' ), // Admin has handled the request.
 	);
 }
