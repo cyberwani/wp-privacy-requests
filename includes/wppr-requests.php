@@ -72,7 +72,7 @@ function _wp_privacy_create_request( $email_address, $action, $description ) {
 	$user    = get_user_by( 'email', $email_address );
 
 	if ( $user ) {
-		$user_id = $user->user_id;
+		$user_id = $user->ID;
 	}
 
 	$privacy_request_id = wp_insert_post( array(
