@@ -22,7 +22,7 @@ git clone git@github.com:allendav/wp-privacy-requests.git
 - Enter an email address of a user with comments on the site
 - Hit Send request
 - Note the request should now appear in the table
-- Hover over the email address in the table, then scroll down and click on Download Personal Data or Remove Personal Data as desired
+- Hover over the email address in the table, then scroll down and click on Download Personal Data or Remove Personal Data as desired -- NOTE: This has been disabled for the moment as we prepare a core patch with adding requests, the request tables, and re-sending or deleting requests from the tables.  The next set of patches will restore the disabled code.
 - Profit!
 
 - Bonus points: Install and activate the WP Mail SMTP by WPForms plugin so you can actually send yourself confirmation emails from your local WordPress install
