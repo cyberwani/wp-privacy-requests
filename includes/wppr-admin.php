@@ -302,6 +302,7 @@ function _wp_personal_data_removal_page() {
 		'plural'   => 'privacy_requests',
 		'singular' => 'privacy_request',
 	) );
+	$requests_table->process_bulk_action();
 	$requests_table->prepare_items();
 	?>
 	<div class="wrap nosubsub">
