@@ -6,9 +6,17 @@ if ( ! class_exists( 'WP_List_Table' ) ) {
 }
 
 /**
- * WP_Personal_Data_Export_Requests_Table class.
+ * WP_Privacy_Requests_Table class.
  */
-class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
+abstract class WP_Privacy_Requests_Table extends WP_List_Table {
+
+	/**
+	 * Action name for the requests this table will work with. Classes
+	 * which inherit from WP_Privacy_Requests_Table should define this.
+	 * e.g. 'export_personal_data'
+	 */
+	const ACTION_NAME = 'INVALID';
+
 	/**
 	 * Get columns to show in the list table.
 	 *
@@ -53,13 +61,15 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 		$current_status = isset( $_REQUEST['filter-status'] ) ? sanitize_text_field( $_REQUEST['filter-status'] ): '';
 		$statuses       = _wp_privacy_statuses();
 		$views          = array();
+		$c              = get_called_class();
+		$admin_url      = admin_url( 'tools.php?page=' . $c::ACTION_NAME );
 
 		$current_link_attributes = empty( $current_status ) ? ' class="current" aria-current="page"' : '';
-		$views['all']            = '<a href="' . esc_url( admin_url( 'tools.php?page=wp-personal-data-export' ) ) . "\" $current_link_attributes>" . esc_html__( 'All' ) . '</a>';
+		$views['all']            = '<a href="' . esc_url( $admin_url ) . "\" $current_link_attributes>" . esc_html__( 'All' ) . '</a>';
 
 		foreach ( $statuses as $status => $label ) {
 			$current_link_attributes = $status === $current_status ? ' class="current" aria-current="page"' : '';
-			$views[ $status ] = '<a href="' . esc_url( add_query_arg( 'filter-status', $status, admin_url( 'tools.php?page=wp-personal-data-export' ) ) ) . "\" $current_link_attributes>" . esc_html( $label ) . '</a>';
+			$views[ $status ] = '<a href="' . esc_url( add_query_arg( 'filter-status', $status, $admin_url ) ) . "\" $current_link_attributes>" . esc_html( $label ) . '</a>';
 		}
 
 		return $views;
@@ -131,6 +141,12 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 			$primary,
 		);
 
+		$c              = get_called_class();
+		$name_query     = array(
+			'meta_key'   => '_action_name',
+			'meta_value' => $c::ACTION_NAME,
+		);
+
 		$this->items    = array();
 		$posts_per_page = 20;
 		$args           = array(
@@ -138,7 +154,7 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 			'posts_per_page' => $posts_per_page,
 			'offset'         => isset( $_REQUEST['paged'] ) ? max( 0, absint( $_REQUEST['paged'] ) - 1 ) * $posts_per_page: 0,
 			'post_status'    => 'any',
-			'meta_query'     => array(),
+			'meta_query'     => array( $name_query ),
 		);
 
 		if ( ! empty( $_REQUEST['filter-status'] ) ) {
@@ -148,6 +164,8 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 
 		if ( ! empty( $_REQUEST['s'] ) ) {
 			$args['meta_query'] = array(
+				$name_query,
+				'relation'  => 'AND',
 				array(
 					'key'     => '_user_email',
 					'value'   => isset( $_REQUEST['s'] ) ? sanitize_text_field( $_REQUEST['s'] ): '',
@@ -262,27 +280,59 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 	}
 
 	/**
+	 * Actions column. Overriden by children.
+	 *
+	 * @param array $item Item being shown.
+	 * @return string
+	 */
+	public function column_email( $item ) {
+		return sprintf( '%1$s %2$s', $item['email'], $this->row_actions( array() ) );
+	}
+
+	/**
+	 * Next steps column. Overriden by children.
+	 *
+	 * @param array $item Item being shown.
+	 */
+	public function column_next_steps( $item ) {
+	}
+
+	/**
+	 * Generates content for a single row of the table
+	 *
+	 * @param object $item The current item
+	 */
+	public function single_row( $item ) {
+		$status = get_post_status( $item['request_id'] );
+
+		echo '<tr class="status-' . esc_attr( $status ) . '">';
+		$this->single_row_columns( $item );
+		echo '</tr>';
+	}
+
+	/**
+	 * Embed scripts used to perform actions. Overriden by children.
+	 */
+	public function embed_scripts() {
+	}
+}
+
+/**
+ * WP_Personal_Data_Export_Requests_Table class.
+ */
+class WP_Personal_Data_Export_Requests_Table extends WP_Privacy_Requests_Table {
+	const ACTION_NAME = 'export_personal_data';
+
+	/**
 	 * Actions column.
 	 *
 	 * @param array $item Item being shown.
 	 * @return string
 	 */
 	public function column_email( $item ) {
-		$row_actions = array();
-
-		if ( 'remove_personal_data' === $item['action'] ) {
-			$row_actions['remove_data'] = '<a class="remove_personal_data" href="#" data-email="' . esc_attr( $item['email'] ) . '">' . __( 'Remove Personal Data' ) . '</a>';
-
-			// If we have a user ID, include a delete user action.
-			if ( ! empty( $item['user_id'] ) ) {
-				$delete_user_url            = wp_nonce_url( "users.php?action=delete&amp;user={$item['user_id']}", 'bulk-users' );
-				$row_actions['delete_user'] = "<a class='submitdelete' href='" . $delete_user_url . "'>" . __( 'Delete User' ) . '</a>';
-			}
-
-		} else if ( 'export_personal_data' === $item['action'] ) {
-			$row_actions['download_data'] = '<a class="download_personal_data" href="#" data-email="' . esc_attr( $item['email'] ) . '">' . __( 'Download Personal Data' ) . '</a>';
-			$row_actions['email_data']    = __( 'Email personal data to user' );
-		}
+		$row_actions = array(
+			'download_data' => '<a class="download_personal_data" href="#" data-email="' . esc_attr( $item['email'] ) . '">' . __( 'Download Personal Data' ) . '</a>',
+		);
 
 		return sprintf( '%1$s %2$s', $item['email'], $this->row_actions( $row_actions ) );
 	}
@@ -310,22 +360,9 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 				) );
 				break;
 			case 'action-completed':
-				echo '<a href="' . esc_url( add_query_arg( 'delete', array( $item['request_id'] ), admin_url( 'tools.php?page=wp-personal-data-export' ) ) ) . '">' . esc_html__( 'Remove Request' ) . '</a>';
+				echo '<a href="' . esc_url( add_query_arg( 'delete', array( $item['request_id'] ), admin_url( 'tools.php?page=export_personal_data' ) ) ) . '">' . esc_html__( 'Remove Request' ) . '</a>';
 				break;
 		}
-	}
-
-	/**
-	 * Generates content for a single row of the table
-	 *
-	 * @param object $item The current item
-	 */
-	public function single_row( $item ) {
-		$status = get_post_status( $item['request_id'] );
-
-		echo '<tr class="status-' . esc_attr( $status ) . '">';
-		$this->single_row_columns( $item );
-		echo '</tr>';
 	}
 
 	/**
@@ -333,7 +370,6 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 	 */
 	public function embed_scripts() {
 		$exporters = apply_filters( 'wp_privacy_personal_data_exporters', array() );
-		$erasers   = apply_filters( 'wp_privacy_personal_data_erasers', array() );
 		?>
 		<script>
 			( function( $ ) {
@@ -423,6 +459,84 @@ class WP_Personal_Data_Export_Requests_Table extends WP_List_Table {
 						set_request_busy( actionEl );
 						do_next_export( 1, 1 );
 					} )
+				} );
+			} ( jQuery ) );
+		</script>
+		<?php
+	}
+}
+
+/**
+ * WP_Personal_Data_Removal_Requests_Table class.
+ */
+class WP_Personal_Data_Removal_Requests_Table extends WP_Privacy_Requests_Table {
+	const ACTION_NAME = 'remove_personal_data';
+
+	/**
+	 * Actions column.
+	 *
+	 * @param array $item Item being shown.
+	 * @return string
+	 */
+	public function column_email( $item ) {
+		$row_actions = array(
+			'remove_data' => '<a class="remove_personal_data" href="#" data-email="' . esc_attr( $item['email'] ) . '">' . __( 'Remove Personal Data' ) . '</a>',
+		);
+
+		// If we have a user ID, include a delete user action.
+		if ( ! empty( $item['user_id'] ) ) {
+			$delete_user_url            = wp_nonce_url( "users.php?action=delete&amp;user={$item['user_id']}", 'bulk-users' );
+			$row_actions['delete_user'] = "<a class='submitdelete' href='" . $delete_user_url . "'>" . __( 'Delete User' ) . '</a>';
+		}
+
+		return sprintf( '%1$s %2$s', $item['email'], $this->row_actions( $row_actions ) );
+	}
+
+	/**
+	 * Next steps column.
+	 *
+	 * @param array $item Item being shown.
+	 */
+	public function column_next_steps( $item ) {
+		// TODO
+	}
+
+	/**
+	 * Embed scripts used to perform the erasure.
+	 */
+	public function embed_scripts() {
+		$erasers   = apply_filters( 'wp_privacy_personal_data_erasers', array() );
+		?>
+		<script>
+			( function( $ ) {
+				$( document ).ready( function() {
+					var successMessage = "<?php echo esc_attr( __( 'Action completed successfully' ) ); ?>";
+					var failureMessage = "<?php echo esc_attr( __( 'A failure occurred during processing' ) ); ?>";
+					var spinnerUrl = "<?php echo esc_url( admin_url( '/images/wpspin_light.gif' ) ); ?>";
+
+					function set_request_busy( actionEl ) {
+						actionEl.parents( '.row-actions' ).hide();
+						var checkColumn = actionEl.parents( 'tr' ).find( '.check-column' );
+						checkColumn.find( 'input' ).hide();
+						checkColumn.find( '.spinner' ).css( {
+							background: 'url( ' + spinnerUrl + ' ) no-repeat',
+							'background-size': '16px 16px',
+							float: 'right',
+							opacity: '.7',
+							filter: 'alpha(opacity=70)',
+							width: '16px',
+							height: '16px',
+							margin: '5px 5px 0',
+							visibility: 'visible'
+						} );
+					}
+
+					function set_request_not_busy( actionEl ) {
+						actionEl.parents( '.row-actions' ).show();
+						var checkColumn = actionEl.parents( 'tr' ).find( '.check-column' );
+						checkColumn.find( '.spinner' ).hide();
+						checkColumn.find( 'input' ).show();
+					}
 
 					$( '.remove_personal_data' ).click( function() {
 						var eraseNonce = <?php echo json_encode( wp_create_nonce( 'wp-privacy-erase-personal-data' ) ); ?>;
