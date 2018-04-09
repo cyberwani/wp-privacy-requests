@@ -128,7 +128,7 @@ function _wp_personal_data_handle_actions() {
 			add_settings_error(
 				'export_personal_data_email_retry',
 				'export_personal_data_email_retry',
-				__( 'Verification request re-resent successfully.' ),
+				__( 'Confirmation request re-resent successfully.' ),
 				'updated'
 			);
 		}
@@ -219,14 +219,14 @@ function _wp_personal_data_handle_actions() {
 						add_settings_error(
 							'username_or_email_to_export',
 							'username_or_email_to_export',
-							__( 'Unable to initiate verification request.' ),
+							__( 'Unable to initiate confirmation request.' ),
 							'error'
 						);
 					} else {
 						add_settings_error(
 							'username_or_email_to_export',
 							'username_or_email_to_export',
-							__( 'Verification request initiated successfully.' ),
+							__( 'Confirmation request initiated successfully.' ),
 							'updated'
 						);
 					}
