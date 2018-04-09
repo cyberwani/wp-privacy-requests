@@ -16,10 +16,26 @@ add_action( 'account_action_failed', '_wp_privacy_account_action_failed' );
  */
 function _wp_privacy_post_types() {
 	register_post_type(
-		'privacy_request', array(
+		'export_personal_data', array(
 			'labels'           => array(
-				'name'          => __( 'Privacy Requests' ),
-				'singular_name' => __( 'Privacy Request' ),
+				'name'          => __( 'Export Personal Data Requests' ),
+				'singular_name' => __( 'Export Personal Data Request' ),
+			),
+			'public'           => false,
+			'_builtin'         => true, /* internal use only. don't use this when registering your own post type. */
+			'hierarchical'     => false,
+			'rewrite'          => false,
+			'query_var'        => false,
+			'can_export'       => false,
+			'delete_with_user' => false,
+		)
+	);
+
+	register_post_type(
+		'remove_personal_data', array(
+			'labels'           => array(
+				'name'          => __( 'Remove Personal Data Requests' ),
+				'singular_name' => __( 'Remove Personal Data Request' ),
 			),
 			'public'           => false,
 			'_builtin'         => true, /* internal use only. don't use this when registering your own post type. */
@@ -62,7 +78,7 @@ function _wp_privacy_create_request( $email_address, $action, $description ) {
 	$privacy_request_id = wp_insert_post( array(
 		'post_author'   => $user_id,
 		'post_status'   => 'action-pending',
-		'post_type'     => 'privacy_request',
+		'post_type'     => _wp_privacy_action_post_type( $action ),
 		'post_date'     => current_time( 'mysql', false ),
 		'post_date_gmt' => current_time( 'mysql', true ),
 	), true );
@@ -90,7 +106,7 @@ function _wp_privacy_account_action_confirmed( $result ) {
 		$privacy_request_id = absint( $result['request_data']['privacy_request_id'] );
 		$privacy_request    = get_post( $privacy_request_id );
 
-		if ( ! $privacy_request || 'privacy_request' !== $privacy_request->post_type ) {
+		if ( ! $privacy_request || ! in_array( $privacy_request->post_type, array_map( '_wp_privacy_action_post_type', _wp_privacy_action_request_types() ), true ) ) {
 			return;
 		}
 
@@ -112,7 +128,7 @@ function _wp_privacy_account_action_failed( $result ) {
 		$privacy_request_id = absint( $result['request_data']['privacy_request_id'] );
 		$privacy_request    = get_post( $privacy_request_id );
 
-		if ( ! $privacy_request || 'privacy_request' !== $privacy_request->post_type ) {
+		if ( ! $privacy_request || ! in_array( $privacy_request->post_type, array_map( '_wp_privacy_action_post_type', _wp_privacy_action_request_types() ), true ) ) {
 			return;
 		}
 
@@ -124,13 +140,54 @@ function _wp_privacy_account_action_failed( $result ) {
 }
 
 /**
- * Get action description from the name.
+ * Get all request types.
+ *
+ * @return array
  */
-function _wp_privacy_action_description( $action_name ) {
-	switch ( $action_name ) {
+function _wp_privacy_action_request_types() {
+	return array(
+		'export_personal_data',
+		'remove_personal_data',
+	);
+}
+
+/**
+ * Get action description from the name.
+ *
+ * @return string
+ */
+function _wp_privacy_action_description( $request_type ) {
+	switch ( $request_type ) {
 		case 'export_personal_data':
-			return __( 'Export personal data' );
+			return __( 'Export Personal Data' );
 		case 'remove_personal_data':
-			return __( 'Remove personal data' );
+			return __( 'Remove Personal Data' );
 	}
+}
+
+/**
+ * Get action post type from the name.
+ *
+ * @return string
+ */
+function _wp_privacy_action_post_type( $request_type ) {
+	switch ( $request_type ) {
+		case 'export_personal_data':
+			return 'export_personal_data';
+		case 'remove_personal_data':
+			return 'remove_personal_data';
+	}
+}
+
+/**
+ * Return statuses for requests.
+ *
+ * @return array
+ */
+function _wp_privacy_statuses() {
+	return array(
+		'action-pending'   => __( 'Pending' ), // Pending confirmation from user.
+		'action-confirmed' => __( 'Confirmed' ), // User has confirmed the action.
+		'action-failed'    => __( 'Failed' ), // User failed to confirm the action.
+	);
 }

@@ -5,7 +5,14 @@ defined( 'ABSPATH' ) || exit;
  * WP_Privacy_Data_Removal_Requests_Table class.
  */
 class WP_Privacy_Data_Removal_Requests_Table extends WP_Privacy_Requests_Table {
-	const ACTION_NAME = 'remove_personal_data';
+	/**
+	 * Action name for the requests this table will work with. Classes
+	 * which inherit from WP_Privacy_Requests_Table should define this.
+	 * e.g. 'export_personal_data'
+	 *
+	 * @var string $request_type Name of action.
+	 */
+	protected $request_type = 'remove_personal_data';
 
 	/**
 	 * Actions column.

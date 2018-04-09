@@ -14,8 +14,10 @@ abstract class WP_Privacy_Requests_Table extends WP_List_Table {
 	 * Action name for the requests this table will work with. Classes
 	 * which inherit from WP_Privacy_Requests_Table should define this.
 	 * e.g. 'export_personal_data'
+	 *
+	 * @var string $request_type Name of action.
 	 */
-	const ACTION_NAME = 'INVALID';
+	protected $request_type = 'INVALID';
 
 	/**
 	 * Get columns to show in the list table.
@@ -61,15 +63,15 @@ abstract class WP_Privacy_Requests_Table extends WP_List_Table {
 		$current_status = isset( $_REQUEST['filter-status'] ) ? sanitize_text_field( $_REQUEST['filter-status'] ): '';
 		$statuses       = _wp_privacy_statuses();
 		$views          = array();
-		$c              = get_called_class();
-		$admin_url      = admin_url( 'tools.php?page=' . $c::ACTION_NAME );
+		$admin_url      = admin_url( 'tools.php?page=' . $this->request_type );
+		$counts         = wp_count_posts( $this->request_type );
 
 		$current_link_attributes = empty( $current_status ) ? ' class="current" aria-current="page"' : '';
 		$views['all']            = '<a href="' . esc_url( $admin_url ) . "\" $current_link_attributes>" . esc_html__( 'All' ) . '</a>';
 
 		foreach ( $statuses as $status => $label ) {
 			$current_link_attributes = $status === $current_status ? ' class="current" aria-current="page"' : '';
-			$views[ $status ] = '<a href="' . esc_url( add_query_arg( 'filter-status', $status, $admin_url ) ) . "\" $current_link_attributes>" . esc_html( $label ) . '</a>';
+			$views[ $status ]        = '<a href="' . esc_url( add_query_arg( 'filter-status', $status, $admin_url ) ) . "\" $current_link_attributes>" . esc_html( $label ) . '</a>';
 		}
 
 		return $views;
@@ -141,20 +143,13 @@ abstract class WP_Privacy_Requests_Table extends WP_List_Table {
 			$primary,
 		);
 
-		$c              = get_called_class();
-		$name_query     = array(
-			'meta_key'   => '_action_name',
-			'meta_value' => $c::ACTION_NAME,
-		);
-
 		$this->items    = array();
 		$posts_per_page = 20;
 		$args           = array(
-			'post_type'      => 'privacy_request',
+			'post_type'      => _wp_privacy_action_post_type( $this->request_type ),
 			'posts_per_page' => $posts_per_page,
 			'offset'         => isset( $_REQUEST['paged'] ) ? max( 0, absint( $_REQUEST['paged'] ) - 1 ) * $posts_per_page: 0,
 			'post_status'    => 'any',
-			'meta_query'     => array( $name_query ),
 		);
 
 		if ( ! empty( $_REQUEST['filter-status'] ) ) {
