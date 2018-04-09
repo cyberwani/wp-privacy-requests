@@ -94,7 +94,7 @@ abstract class WP_Privacy_Requests_Table extends WP_List_Table {
 	 */
 	public function process_bulk_action() {
 		$action      = $this->current_action();
-		$request_ids = isset( $_POST['request_id'] ) ? wp_parse_id_list( wp_unslash( $_POST['request_id'] ) ) : array(); // WPCS: input var ok, CSRF ok.
+		$request_ids = isset( $_REQUEST['request_id'] ) ? wp_parse_id_list( wp_unslash( $_REQUEST['request_id'] ) ) : array(); // WPCS: input var ok, CSRF ok.
 
 		if ( $request_ids ) {
 			check_admin_referer( 'bulk-privacy_requests' );

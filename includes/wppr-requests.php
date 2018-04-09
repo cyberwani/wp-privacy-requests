@@ -107,7 +107,7 @@ function _wp_privacy_resend_request( $privacy_request_id ) {
 	$privacy_request    = get_post( $privacy_request_id );
 
 	if ( ! $privacy_request || ! in_array( $privacy_request->post_type, array_map( '_wp_privacy_action_post_type', _wp_privacy_action_request_types() ), true ) ) {
-		return new WP_Error( 'privacy_resend_error', __( 'Invalid request.' ) );
+		return new WP_Error( 'privacy_request_error', __( 'Invalid request.' ) );
 	}
 
 	$email_address = get_post_meta( $privacy_request_id, '_user_email', true );
@@ -120,7 +120,7 @@ function _wp_privacy_resend_request( $privacy_request_id ) {
 	if ( is_wp_error( $result ) ) {
 		return $result;
 	} elseif ( ! $result ) {
-		return new WP_Error( 'privacy_resend_error', __( 'Unable to initiate verification request.' ) );
+		return new WP_Error( 'privacy_request_error', __( 'Unable to initiate verification request.' ) );
 	}
 
 	wp_update_post( array(
@@ -131,6 +131,28 @@ function _wp_privacy_resend_request( $privacy_request_id ) {
 	) );
 
 	return true;
+}
+
+/**
+ * Marks a request as completed by the admin and logs the datetime.
+ *
+ * @param int $privacy_request_id Request ID.
+ * @return bool|WP_Error
+ */
+function _wp_privacy_completed_request( $privacy_request_id ) {
+	$privacy_request_id = absint( $privacy_request_id );
+	$privacy_request    = get_post( $privacy_request_id );
+
+	if ( ! $privacy_request || ! in_array( $privacy_request->post_type, array_map( '_wp_privacy_action_post_type', _wp_privacy_action_request_types() ), true ) ) {
+		return new WP_Error( 'privacy_request_error', __( 'Invalid request.' ) );
+	}
+
+	wp_update_post( array(
+		'ID'          => $privacy_request_id,
+		'post_status' => 'action-completed',
+	) );
+
+	update_post_meta( $privacy_request_id, '_completed_timestamp', time() );
 }
 
 /**
@@ -223,8 +245,9 @@ function _wp_privacy_action_post_type( $request_type ) {
  */
 function _wp_privacy_statuses() {
 	return array(
-		'action-pending'   => __( 'Pending' ), // Pending confirmation from user.
-		'action-confirmed' => __( 'Confirmed' ), // User has confirmed the action.
-		'action-failed'    => __( 'Failed' ), // User failed to confirm the action.
+		'action-pending'   => __( 'Pending' ),      // Pending confirmation from user.
+		'action-confirmed' => __( 'Confirmed' ),    // User has confirmed the action.
+		'action-failed'    => __( 'Failed' ),       // User failed to confirm the action.
+		'action-completed'    => __( 'Completed' ), // Admin has handled the request.
 	);
 }

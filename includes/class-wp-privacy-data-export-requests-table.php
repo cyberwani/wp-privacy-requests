@@ -41,15 +41,16 @@ class WP_Privacy_Data_Export_Requests_Table extends WP_Privacy_Requests_Table {
 				esc_html_e( 'Waiting for confirmation' );
 				break;
 			case 'action-confirmed':
-				submit_button( __( 'Email Data' ), 'secondary', 'export_personal_data_email_send', false, array(
-					'value' => $item['request_id'],
-				) );
+				submit_button( __( 'Email Data' ), 'secondary', 'export_personal_data_email_send[' . $item['request_id'] . ']', false );
 				break;
 			case 'action-failed':
 				submit_button( __( 'Retry' ), 'secondary', 'export_personal_data_email_retry[' . $item['request_id'] . ']', false );
 				break;
 			case 'action-completed':
-				echo '<a href="' . esc_url( add_query_arg( 'delete', array( $item['request_id'] ), admin_url( 'tools.php?page=export_personal_data' ) ) ) . '">' . esc_html__( 'Remove Request' ) . '</a>';
+				echo '<a href="' . esc_url( wp_nonce_url( add_query_arg( array( 
+					'action' => 'delete', 
+					'request_id' => array( $item['request_id'] ) 
+				), admin_url( 'tools.php?page=export_personal_data' ) ), 'bulk-privacy_requests' ) ) . '">' . esc_html__( 'Remove request' ) . '</a>';
 				break;
 		}
 	}

@@ -75,7 +75,7 @@ function _wp_personal_data_handle_actions() {
 	if ( isset( $_POST['export_personal_data_email_retry'] ) ) { // WPCS: input var ok.
 		check_admin_referer( 'bulk-privacy_requests' );
 
-		$request_id = absint( current( array_keys( (array) $_POST['export_personal_data_email_retry'] ) ) ); // WPCS: input var ok.
+		$request_id = absint( current( array_keys( (array) wp_unslash( $_POST['export_personal_data_email_retry'] ) ) ) ); // WPCS: input var ok, sanitization ok.
 		$result     = _wp_privacy_resend_request( $request_id );
 
 		if ( is_wp_error( $result ) ) {
@@ -94,10 +94,32 @@ function _wp_personal_data_handle_actions() {
 			);
 		}
 
-	} elseif ( isset( $_POST['export_personal_data_email_send'] ) ) {
+	} elseif ( isset( $_POST['export_personal_data_email_send'] ) ) { // WPCS: input var ok.
 		check_admin_referer( 'bulk-privacy_requests' );
 
-		// @todo
+		$request_id = absint( current( array_keys( (array) wp_unslash( $_POST['export_personal_data_email_send'] ) ) ) ); // WPCS: input var ok, sanitization ok.
+		$result     = false;
+
+		/**
+		 * TODO: Email the data to the user here.
+		 */
+
+		if ( is_wp_error( $result ) ) {
+			add_settings_error(
+				'export_personal_data_email_send',
+				'export_personal_data_email_send',
+				$result->get_error_message(),
+				'error'
+			);
+		} else {
+			_wp_privacy_completed_request( $request_id );
+			add_settings_error(
+				'export_personal_data_email_send',
+				'export_personal_data_email_send',
+				__( 'Personal data was sent to the user successfully.' ),
+				'updated'
+			);
+		}
 
 	} elseif ( isset( $_POST['action'] ) ) {
 		$action = isset( $_POST['action'] ) ? sanitize_key( wp_unslash( $_POST['action'] ) ) : ''; // WPCS: input var ok, CSRF ok.
