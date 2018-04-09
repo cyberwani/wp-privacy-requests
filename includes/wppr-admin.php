@@ -72,87 +72,106 @@ function _wp_privacy_requests_styles() {
  * Handle list table actions.
  */
 function _wp_personal_data_handle_actions() {
-	$action = isset( $_POST['action'] ) ? sanitize_key( wp_unslash( $_POST['action'] ) ) : ''; // WPCS: input var ok, CSRF ok.
+	if ( isset( $_POST['export_personal_data_email_retry'] ) ) { // WPCS: input var ok.
+		check_admin_referer( 'bulk-privacy_requests' );
 
-	if ( empty( $action ) ) {
-		return;
-	}
+		$request_id = absint( current( array_keys( (array) $_POST['export_personal_data_email_retry'] ) ) ); // WPCS: input var ok.
+		$result     = _wp_privacy_resend_request( $request_id );
 
-	check_admin_referer( 'personal-data-request' );
+		if ( is_wp_error( $result ) ) {
+			add_settings_error(
+				'export_personal_data_email_retry',
+				'export_personal_data_email_retry',
+				$result->get_error_message(),
+				'error'
+			);
+		} else {
+			add_settings_error(
+				'export_personal_data_email_retry',
+				'export_personal_data_email_retry',
+				__( 'Verification request re-resent successfully.' ),
+				'updated'
+			);
+		}
 
-	switch ( $action ) {
-		case 'add_export_personal_data_request':
-		case 'add_remove_personal_data_request':
-			if ( ! isset( $_POST['type_of_action'], $_POST['username_or_email_to_export'] ) ) { // WPCS: input var ok.
-				add_settings_error(
-					'action_type',
-					'action_type',
-					__( 'Invalid action.' ),
-					'error'
-				);
-			}
-			$action_type               = sanitize_text_field( wp_unslash( $_POST['type_of_action'] ) ); // WPCS: input var ok.
-			$username_or_email_address = sanitize_text_field( wp_unslash( $_POST['username_or_email_to_export'] ) ); // WPCS: input var ok.
-			$email_address             = '';
+	} elseif ( isset( $_POST['export_personal_data_email_send'] ) ) {
+		check_admin_referer( 'bulk-privacy_requests' );
 
-			if ( ! in_array( $action_type, _wp_privacy_action_request_types(), true ) ) {
-				add_settings_error(
-					'action_type',
-					'action_type',
-					__( 'Invalid action.' ),
-					'error'
-				);
-			}
+		// @todo
 
-			if ( ! is_email( $username_or_email_address ) ) {
-				$user = get_user_by( 'login', $username_or_email_address );
-				if ( ! $user instanceof WP_User ) {
+	} elseif ( isset( $_POST['action'] ) ) {
+		$action = isset( $_POST['action'] ) ? sanitize_key( wp_unslash( $_POST['action'] ) ) : ''; // WPCS: input var ok, CSRF ok.
+
+		switch ( $action ) {
+			case 'add_export_personal_data_request':
+			case 'add_remove_personal_data_request':
+				check_admin_referer( 'personal-data-request' );
+
+				if ( ! isset( $_POST['type_of_action'], $_POST['username_or_email_to_export'] ) ) { // WPCS: input var ok.
 					add_settings_error(
-						'username_or_email_to_export',
-						'username_or_email_to_export',
-						__( 'Unable to add export request. A valid email address or username must be supplied.' ),
+						'action_type',
+						'action_type',
+						__( 'Invalid action.' ),
 						'error'
-					);
-				} else {
-					$email_address = $user->user_email;
-				}
-			} else {
-				$email_address = $username_or_email_address;
-			}
-
-			if ( ! empty( $email_address ) ) {
-				$result = false;
-
-				$result = _wp_privacy_create_request( $email_address, $action_type, _wp_privacy_action_description( $action_type ) );
-
-				if ( is_wp_error( $result ) ) {
-					add_settings_error(
-						'username_or_email_to_export',
-						'username_or_email_to_export',
-						$result->get_error_message(),
-						'error'
-					);
-				} elseif ( ! $result ) {
-					add_settings_error(
-						'username_or_email_to_export',
-						'username_or_email_to_export',
-						__( 'Unable to initiate verification request.' ),
-						'error'
-					);
-				} else {
-					add_settings_error(
-						'username_or_email_to_export',
-						'username_or_email_to_export',
-						__( 'Verification request initiated successfully.' ),
-						'updated'
 					);
 				}
-			}
-			break;
-		case 'export_personal_data_email_send':
-			break;
-		case 'export_personal_data_email_retry':
-			break;
+				$action_type               = sanitize_text_field( wp_unslash( $_POST['type_of_action'] ) ); // WPCS: input var ok.
+				$username_or_email_address = sanitize_text_field( wp_unslash( $_POST['username_or_email_to_export'] ) ); // WPCS: input var ok.
+				$email_address             = '';
+
+				if ( ! in_array( $action_type, _wp_privacy_action_request_types(), true ) ) {
+					add_settings_error(
+						'action_type',
+						'action_type',
+						__( 'Invalid action.' ),
+						'error'
+					);
+				}
+
+				if ( ! is_email( $username_or_email_address ) ) {
+					$user = get_user_by( 'login', $username_or_email_address );
+					if ( ! $user instanceof WP_User ) {
+						add_settings_error(
+							'username_or_email_to_export',
+							'username_or_email_to_export',
+							__( 'Unable to add export request. A valid email address or username must be supplied.' ),
+							'error'
+						);
+					} else {
+						$email_address = $user->user_email;
+					}
+				} else {
+					$email_address = $username_or_email_address;
+				}
+
+				if ( ! empty( $email_address ) ) {
+					$result = _wp_privacy_create_request( $email_address, $action_type, _wp_privacy_action_description( $action_type ) );
+
+					if ( is_wp_error( $result ) ) {
+						add_settings_error(
+							'username_or_email_to_export',
+							'username_or_email_to_export',
+							$result->get_error_message(),
+							'error'
+						);
+					} elseif ( ! $result ) {
+						add_settings_error(
+							'username_or_email_to_export',
+							'username_or_email_to_export',
+							__( 'Unable to initiate verification request.' ),
+							'error'
+						);
+					} else {
+						add_settings_error(
+							'username_or_email_to_export',
+							'username_or_email_to_export',
+							__( 'Verification request initiated successfully.' ),
+							'updated'
+						);
+					}
+				}
+				break;
+		}
 	}
 }
 
@@ -167,6 +186,7 @@ function _wp_personal_data_export_page() {
 		'plural'   => 'privacy_requests',
 		'singular' => 'privacy_request',
 	) );
+	$requests_table->process_bulk_action();
 	$requests_table->prepare_items();
 	?>
 	<div class="wrap nosubsub">

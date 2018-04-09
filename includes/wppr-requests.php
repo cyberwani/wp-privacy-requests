@@ -97,6 +97,43 @@ function _wp_privacy_create_request( $email_address, $action, $description ) {
 }
 
 /**
+ * Resend an existing request and return the result.
+ *
+ * @param int $privacy_request_id Request ID.
+ * @return bool|WP_Error
+ */
+function _wp_privacy_resend_request( $privacy_request_id ) {
+	$privacy_request_id = absint( $privacy_request_id );
+	$privacy_request    = get_post( $privacy_request_id );
+
+	if ( ! $privacy_request || ! in_array( $privacy_request->post_type, array_map( '_wp_privacy_action_post_type', _wp_privacy_action_request_types() ), true ) ) {
+		return new WP_Error( 'privacy_resend_error', __( 'Invalid request.' ) );
+	}
+
+	$email_address = get_post_meta( $privacy_request_id, '_user_email', true );
+	$action        = get_post_meta( $privacy_request_id, '_action_name', true );
+	$description   = _wp_privacy_action_description( $action );
+	$result        = wp_send_account_verification_key( $email_address, $action, $description, array(
+		'privacy_request_id' => $privacy_request_id,
+	) );
+
+	if ( is_wp_error( $result ) ) {
+		return $result;
+	} elseif ( ! $result ) {
+		return new WP_Error( 'privacy_resend_error', __( 'Unable to initiate verification request.' ) );
+	}
+
+	wp_update_post( array(
+		'ID'            => $privacy_request_id,
+		'post_status'   => 'action-pending',
+		'post_date'     => current_time( 'mysql', false ),
+		'post_date_gmt' => current_time( 'mysql', true ),
+	) );
+
+	return true;
+}
+
+/**
  * Update log when privacy action is confirmed.
  *
  * @param array $result Result of the action from the user.
@@ -114,7 +151,7 @@ function _wp_privacy_account_action_confirmed( $result ) {
 		wp_update_post( array(
 			'ID'          => $privacy_request_id,
 			'post_status' => 'action-confirmed',
-		), $wp_error );
+		) );
 	}
 }
 
@@ -135,7 +172,7 @@ function _wp_privacy_account_action_failed( $result ) {
 		wp_update_post( array(
 			'ID'          => $privacy_request_id,
 			'post_status' => 'action-failed',
-		), $wp_error );
+		) );
 	}
 }
 

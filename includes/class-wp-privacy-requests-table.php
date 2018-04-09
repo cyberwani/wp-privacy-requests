@@ -93,36 +93,45 @@ abstract class WP_Privacy_Requests_Table extends WP_List_Table {
 	 * Process bulk actions.
 	 */
 	public function process_bulk_action() {
-		if ( ! isset( $_POST['_wpnonce'] ) || ! wp_verify_nonce( $_POST['_wpnonce'], 'bulk-privacy_requests' ) ) {
-			return;
-		}
-
 		$action      = $this->current_action();
-		$request_ids = isset( $_POST['request_id'] ) ? wp_parse_id_list( $_POST['request_id'] ) : array();
+		$request_ids = isset( $_POST['request_id'] ) ? wp_parse_id_list( wp_unslash( $_POST['request_id'] ) ) : array(); // WPCS: input var ok, CSRF ok.
+
+		if ( $request_ids ) {
+			check_admin_referer( 'bulk-privacy_requests' );
+		}
 
 		switch ( $action ) {
 			case 'delete':
-				foreach ( $request_ids as $request_id ) {
-					wp_delete_post( $request_id, true );
-				}
-				break;
-			case 'resend':
-				foreach ( $request_ids as $request_id ) {
-					$action = get_post_meta( $request_id, '_action_name', true );
-					$email  = get_post_meta( $request_id, '_user_email', true );
+				$count = 0;
 
-					if ( is_email( $email ) && $action ) {
-						wp_send_account_verification_key( $email, $action, _wp_privacy_action_description( $action ), array(
-							'privacy_request_id' => $request_id,
-						) );
-						wp_update_post( array(
-							'ID'            => $request_id,
-							'post_status'   => 'action-pending',
-							'post_date'     => current_time( 'mysql', false ),
-							'post_date_gmt' => current_time( 'mysql', true ),
-						), $wp_error );
+				foreach ( $request_ids as $request_id ) {
+					if ( wp_delete_post( $request_id, true ) ) {
+						$count ++;
 					}
 				}
+
+				add_settings_error(
+					'bulk_action',
+					'bulk_action',
+					sprintf( _n( 'Deleted %d request', 'Deleted %d requests', $count ), $count ),
+					'updated'
+				);
+				break;
+			case 'resend':
+				$count = 0;
+
+				foreach ( $request_ids as $request_id ) {
+					if ( _wp_privacy_resend_request( $request_id ) ) {
+						$count ++;
+					}
+				}
+
+				add_settings_error(
+					'bulk_action',
+					'bulk_action',
+					sprintf( _n( 'Re-sent %d request', 'Re-sent %d requests', $count ), $count ),
+					'updated'
+				);
 				break;
 		}
 	}
@@ -132,8 +141,6 @@ abstract class WP_Privacy_Requests_Table extends WP_List_Table {
 	 */
 	public function prepare_items() {
 		global $wpdb;
-
-		$this->process_bulk_action();
 
 		$primary               = $this->get_primary_column_name();
 		$this->_column_headers = array(
