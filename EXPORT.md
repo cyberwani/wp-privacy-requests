@@ -2,7 +2,7 @@
 
 ## Background
 
-In WordPress 4.9.5, new tools were added to make compliance with laws like the
+In WordPress 4.9.x, new tools were added to make compliance with laws like the
 European Union's General Data Protection Regulation, or GDPR for short. Among
 the tools added is a Personal Data Export tool which supports exporting all
 the personal data for a given user in a ZIP file.
@@ -92,7 +92,7 @@ need one. Let's work from the example given above where a plugin adds
 location data for the commenter to comments.
 
 First, let's assume the plugin has used `add_comment_meta` to add location
-data using `$meta_key` of `location`
+data using `meta_key`s of `latitude` and `longitude`
 
 The first thing the plugin needs to do is to create an exporter function
 that accepts an email address and a page, e.g.:
@@ -105,20 +105,21 @@ function my_plugin_exporter( $email_address, $page = 1 ) {
   $export_items = array();
 
   $comments = get_comments(
- 	  array(
- 	    'author_email' => $email_address,
- 	    'number'       => $number,
- 	    'paged'        => $page,
- 	    'order_by'     => 'comment_ID',
- 	    'order'        => 'ASC',
- 	    )
- 	);
+    array(
+      'author_email' => $email_address,
+      'number'       => $number,
+      'paged'        => $page,
+      'order_by'     => 'comment_ID',
+      'order'        => 'ASC',
+      )
+  );
 
   foreach ( (array) $comments as $comment ) {
-    $location = get_comment_meta( $comment->comment_ID, 'location', true );
+    $latitude  = get_comment_meta( $comment->comment_ID, 'latitude', true );
+    $longitude = get_comment_meta( $comment->comment_ID, 'longitude', true );
 
     // Only add location data to the export if it is not empty
-    if ( ! empty( $location ) ) {
+    if ( ! empty( $latitude ) ) {
       // Most item IDs should look like postType-postID
       // If you don't have a post, comment or other ID to work with,
       // use a unique value to avoid having this item's export
@@ -135,19 +136,24 @@ function my_plugin_exporter( $email_address, $page = 1 ) {
       // final exported report
       $group_label = __( 'Comments' );
 
-      // This plugin only has one item to offer, but plugins
-      // can add as many items in the item data array as they want
+      // Plugins can add as many items in the item data array as they want
       $data = array(
-        'name'  => __( 'Commenter Location' ),
-        'value' => $location
+        array(
+          'name'  => __( 'Commenter Latitude' ),
+          'value' => $latitude
+        ),
+        array(
+          'name'  => __( 'Commenter Longitude' ),
+          'value' => $longitude
+        )
       );
 
       $export_items[] = array(
-   	    'group_id'    => $group_id,
-   	    'group_label' => $group_label,
-   	    'item_id'     => $item_id,
-   	    'data'        => $data,
-   	    );
+        'group_id'    => $group_id,
+        'group_label' => $group_label,
+        'item_id'     => $item_id,
+        'data'        => $data,
+      );
     }
   }
 
